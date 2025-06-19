@@ -1,0 +1,106 @@
+<table class="detail-table" style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:12px;">
+    <tr>
+        <td class="detail-label">이름</td>
+        <td class="detail-value">{{ employee.name or '' }}
+            <button type="button" class="btn btn-warning" style="float:right;padding:4px 8px;font-size:11px;" onclick="location.href='{{ url_for('fm.em_edit', em_id=employee.em_id) }}'">수정</button>
+        </td>
+        <td class="detail-label" rowspan="5" style="text-align:center;vertical-align:middle;">사진</td>
+        <td class="detail-value" rowspan="5" style="text-align:center;vertical-align:middle;">
+            {% if employee.maskname %}
+            <img src="{{ url_for('static', filename='images/employees/' + employee.maskname) }}" style="max-width:100px;max-height:100px;object-fit:cover;" alt="직원사진" onerror="this.src='{{ url_for('static', filename='images/common/noimg.gif') }}'">
+            {% else %}
+            <img src="{{ url_for('static', filename='images/common/noimg.gif') }}" style="max-width:100px;max-height:100px;" alt="사진없음">
+            {% endif %}
+        </td>
+    </tr>
+    <tr>
+        <td class="detail-label">생일</td>
+        <td class="detail-value">{{ employee.birthday or '' }}</td>
+    </tr>
+    <tr>
+        <td class="detail-label">전화번호</td>
+        <td class="detail-value">{{ employee.phone or '' }}</td>
+    </tr>
+    <tr>
+        <td class="detail-label">핸드폰</td>
+        <td class="detail-value">{{ employee.mobile_phone or '' }}</td>
+    </tr>
+    <tr>
+        <td class="detail-label">이메일</td>
+        <td class="detail-value">{{ employee.email or '' }}</td>
+    </tr>
+    <tr>
+        <td class="detail-label">주소</td>
+        <td class="detail-value" colspan="3">{{ employee.address or '' }}</td>
+    </tr>
+    <tr>
+        <td class="detail-label">소속</td>
+        <td class="detail-value">{{ employee.prop_name or '' }}</td>
+        <td class="detail-label">근무지</td>
+        <td class="detail-value">{{ employee.work_address or '' }}</td>
+    </tr>
+    <tr>
+        <td class="detail-label">성별</td>
+        <td class="detail-value">{{ employee.sex or '' }}</td>
+        <td class="detail-label">파트</td>
+        <td class="detail-value">{{ employee.emclass_id or '' }}</td>
+    </tr>
+    <tr>
+        <td class="detail-label">회사명</td>
+        <td class="detail-value">{{ employee.com_id or '' }}</td>
+        <td class="detail-label">직급</td>
+        <td class="detail-value">{{ employee.emstd_id or '' }}</td>
+    </tr>
+    <tr>
+        <td class="detail-label">부서명</td>
+        <td class="detail-value">{{ employee.dvp_id or '' }}</td>
+        <td class="detail-label" rowspan="3" style="text-align: center; vertical-align: middle;">사인</td>
+        <td class="detail-value" rowspan="3" style="text-align: center; vertical-align: middle;">
+            {% if employee.signature %}
+                <img src="/static/images/signatures/{{ employee.signature }}" 
+                     style="width: 100px; height: 60px; object-fit: contain;" 
+                     alt="사인" onerror="this.src='/static/images/common/nosign.gif'">
+            {% else %}
+                <img src="/static/images/common/nosign.gif" 
+                     style="width: 100px; height: 60px;" alt="사인없음">
+            {% endif %}
+        </td>
+    </tr>
+    <tr>
+        <td class="detail-label">입사일</td>
+        <td class="detail-value">{{ employee.date_start or '' }}</td>
+    </tr>
+    <tr>
+        <td class="detail-label">등록일</td>
+        <td class="detail-value">{{ employee.date_reg or '' }}</td>
+    </tr>
+    <tr>
+        <td class="detail-label">상의 사이즈</td>
+        <td class="detail-value">{{ employee.top_size or '' }}</td>
+        <td class="detail-label">퇴사일</td>
+        <td class="detail-value">{{ employee.date_end or '' }}</td>
+    </tr>
+    <tr>
+        <td class="detail-label">하의 사이즈</td>
+        <td class="detail-value">{{ employee.bottom_size or '' }}</td>
+        <td class="detail-label">수정일</td>
+        <td class="detail-value">{{ employee.date_modi or '' }}</td>
+    </tr>
+    <tr>
+        <td class="detail-label" style="vertical-align: top;">비고</td>
+        <td class="detail-value" colspan="3">
+            <textarea style="width: 100%; height: 80px; border: 1px solid #dee2e6; padding: 5px; font-size: 12px;" 
+                      readonly placeholder="비고 내용이 없습니다."></textarea>
+        </td>
+    </tr>
+</table>
+
+<script>
+function editEmployee(em_id) {
+    if (window.showStatus) {
+        window.showStatus(`직원 수정 기능을 구현 중입니다. 직원 ID: ${em_id}`);
+    } else {
+        alert(`직원 수정 기능을 구현 중입니다. 직원 ID: ${em_id}`);
+    }
+}
+</script>

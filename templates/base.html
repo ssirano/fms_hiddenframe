@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Python_FMS{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    {% block extra_css %}{% endblock %}
+   
+    <script>
+        // 전역 상태 변수
+        window.headerPinned = true;
+        window.sidebarPinned = true;
+        window.currentModule = null;
+        window.menuData = [];
+        window.userInfo = null;
+        window.propList = [];
+        
+        // 사용자 정보 로드 (base API 사용)
+        window.loadUserInfo = function() {
+            console.log('BASE: loadUserInfo 호출됨');
+            return fetch('/common/get_user_info', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('BASE: 사용자 정보 응답:', data);
+                if (data.success) {
+                    window.userInfo = data;
+                    const userInfoElement = document.getElementById('user-info-text');
+                    if (userInfoElement) {
+                        userInfoElement.innerHTML = `사용자: ${data.name} 님 [${data.emclass_id}]`;
+                        console.log('BASE: 사용자 정보 UI 업데이트 완료');
+                    }
+                    return data;
+                } else {
+                    console.error('BASE: 사용자 정보 로드 실패:', data.message);
+                    window.showStatus('사용자 정보 로드 실패: ' + data.message);
+                    return null;
+                }
+            })
+            .catch(error => {
+                console.error('BASE: 사용자 정보 로드 오류:', error);
+                window.showStatus('사용자 정보 로드 중 오류가 발생했습니다.');
+                return null;
+            });
+        };
+        
+        // 사업소 목록 로드
+        window.loadPropList = function(em_id) {
+            console.log('BASE: loadPropList 호출됨, em_id:', em_id);
+            return fetch('/common/get_prop_list', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ em_id: em_id })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('BASE: 사업소 목록 응답:', data);
+                if (data.success && Array.isArray(data.data)) {
+                    window.propList = data.data;
+                    window.renderPropList();
+                    console.log('BASE: 사업소 목록 로드 완료, 개수:', data.data.length);
+                    return data.data;
+                } else {
+                    console.error('BASE: 사업소 목록 로드 실패:', data);
+                    window.showStatus('사업소 목록 로드 실패');
+                    return [];
+                }
+            })
+            .catch(error => {
+                console.error('BASE: 사업소 목록 로드 오류:', error);
+                window.showStatus('사업소 목록 로드 중 오류가 발생했습니다.');
+                return [];
+            });
+        };
+        
+        // 사업소 목록 렌더링
+        window.renderPropList = function() {
+            const propSelect = document.getElementById('sel_business_place');
+            if (!propSelect) {
+                console.error('사업소 선택 요소를 찾을 수 없습니다.');
+                return;
+            }
+            
+            propSelect.innerHTML = '';
+            
+            if (!window.propList || window.propList.length === 0) {
+                propSelect.innerHTML = '<option value="">사업소 없음</option>';
+                console.warn('BASE: 사업소 목록이 비어있음');
+                return;
+            }
+            
+            console.log('BASE: 사업소 목록 렌더링 시작, 개수:', window.propList.length);
+            
+            propSelect.innerHTML = '<option value="">사업소 선택</option>';
+            
+            window.propList.forEach((prop, index) => {
+                console.log(`사업소 ${index}: ${prop.prop_name} (${prop.prop_id})`);
+                const option = document.createElement('option');
+                option.value = prop.prop_id;
+                option.textContent = `${prop.prop_name} (${prop.prop_id})`;
+                propSelect.appendChild(option);
+            });
+            
+            if (window.propList.length > 0) {
+                propSelect.value = window.propList[0].prop_id;
+                console.log('BASE: 첫 번째 사업소 자동 선택:', window.propList[0].prop_name);
+            }
+            
+            console.log('BASE: 사업소 목록 렌더링 완료');
+        };
+        
+        // 사업소 변경 이벤트
+        window.onBusinessPlaceChange = function() {
+            const propSelect = document.getElementById('sel_business_place');
+            const selectedPropId = propSelect.value;
+            const selectedPropName = propSelect.options[propSelect.selectedIndex].text;
+            console.log('BASE: 사업소 변경됨:', selectedPropId, selectedPropName);
+            
+            if (selectedPropId && window.userInfo) {
+                window.showStatus('선택된 사업소: ' + selectedPropName);
+                window.loadMenuData();
+            }
+        };
+        
+        // 메뉴 데이터 로드
+        window.loadMenuData = function() {
+            if (!window.userInfo || !window.userInfo.em_id) {
+                console.error('BASE: 사용자 정보가 필요합니다.');
+                return Promise.resolve([]);
+            }
+            
+            console.log('BASE: loadMenuData 호출됨, em_id:', window.userInfo.em_id);
+            
+            return fetch('/get_menu_data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ em_id: window.userInfo.em_id })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('BASE: 메뉴 데이터 응답:', data);
+                if (Array.isArray(data)) {
+                    window.menuData = data;
+                    window.renderModuleMenu();
+                    window.renderSidebarMenu();
+                    console.log('BASE: 메뉴 데이터 로드 완료, 개수:', data.length);
+                    return data;
+                } else {
+                    console.error('BASE: 메뉴 데이터 로드 실패');
+                    window.showStatus('메뉴 데이터 로드 실패');
+                    return [];
+                }
+            })
+            .catch(error => {
+                console.error('BASE: 메뉴 데이터 로드 오류:', error);
+                window.showStatus('메뉴 데이터 로드 중 오류가 발생했습니다.');
+                return [];
+            });
+        };
+        
+        // 모듈 메뉴 렌더링
+        window.renderModuleMenu = function() {
+            const moduleMenu = document.querySelector('.module-menu');
+            if (!moduleMenu) {
+                console.error('모듈 메뉴 컨테이너를 찾을 수 없습니다.');
+                return;
+            }
+            
+            if (!window.menuData || window.menuData.length === 0) {
+                console.log('메뉴 데이터가 없습니다.');
+                moduleMenu.innerHTML = '<div style="color: #666;">접근 가능한 메뉴가 없습니다.</div>';
+                return;
+            }
+            
+            console.log('BASE: 모듈 메뉴 렌더링 시작. 메뉴 개수:', window.menuData.length);
+            
+            let moduleHtml = '';
+            window.menuData.forEach((module, index) => {
+                console.log(`모듈 ${index}:`, module.menu_01_title, module.menu_01_module_id);
+                moduleHtml += `
+                    <div class="module-item" data-module-id="${module.menu_01_module_id}" onclick="clickModule(this)">
+                        ${module.menu_01_title}
+                    </div>
+                `;
+            });
+            
+            moduleMenu.innerHTML = moduleHtml;
+            console.log('BASE: 모듈 메뉴 렌더링 완료');
+        };
+
+        // 사이드바 메뉴 렌더링 (DB 데이터 기반)
+        window.renderSidebarMenu = function() {
+            const menuContainer = document.getElementById('menuContainer');
+            if (!menuContainer) {
+                console.error('사이드바 메뉴 컨테이너를 찾을 수 없습니다.');
+                return;
+            }
+            
+            if (!window.menuData || window.menuData.length === 0) {
+                console.log('메뉴 데이터가 없습니다.');
+                menuContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #6c757d;">접근 가능한 메뉴가 없습니다.</div>';
+                return;
+            }
+            
+            // 첫 번째 모듈의 메뉴로 초기화
+            if (window.menuData.length > 0) {
+                const firstModule = window.menuData[0];
+                window.loadModuleMenus(firstModule.menu_01_module_id, firstModule.menu_01_title);
+            }
+        };
+
+        // 상태 메시지 표시
+        window.showStatus = function(message) {
+            const statusIndicator = document.getElementById('statusIndicator');
+            if (statusIndicator) {
+                statusIndicator.textContent = message;
+                statusIndicator.classList.add('show');
+                setTimeout(() => {
+                    statusIndicator.classList.remove('show');
+                }, 2000);
+            }
+        };
+        
+        // 헤더 핀 토글 함수
+        window.toggleHeaderPin = function(button) {
+            console.log('헤더 핀 클릭됨!', window.headerPinned);
+            
+            window.headerPinned = !window.headerPinned;
+            const headerFrame = document.getElementById('headerFrame');
+            
+            if (window.headerPinned) {
+                button.classList.add('pinned');
+                button.textContent = '📌';
+                if (headerFrame) headerFrame.classList.remove('hidden');
+                window.showStatus('헤더가 고정되었습니다.');
+            } else {
+                button.classList.remove('pinned');
+                button.textContent = '📍';
+                if (headerFrame) headerFrame.classList.add('hidden');
+                window.showStatus('헤더가 비고정되었습니다. 상단에 마우스를 대면 나타납니다.');
+            }
+            
+            console.log('헤더 핀 상태 변경됨:', window.headerPinned);
+        };
+        
+        // 사이드바 핀 토글 함수
+        window.toggleSidebarPin = function(button) {
+            console.log('사이드바 핀 클릭됨!', window.sidebarPinned);
+            
+            window.sidebarPinned = !window.sidebarPinned;
+            const sidebarFrame = document.getElementById('sidebarFrame');
+            
+            if (window.sidebarPinned) {
+                button.classList.add('pinned');
+                button.textContent = '📌';
+                if (sidebarFrame) sidebarFrame.classList.remove('hidden');
+                window.showStatus('사이드바가 고정되었습니다.');
+            } else {
+                button.classList.remove('pinned');
+                button.textContent = '📍';
+                if (sidebarFrame) sidebarFrame.classList.add('hidden');
+                window.showStatus('사이드바가 비고정되었습니다. 좌측에 마우스를 대면 나타납니다.');
+            }
+            
+            console.log('사이드바 핀 상태 변경됨:', window.sidebarPinned);
+        };
+        
+        // 모듈 메뉴 클릭 함수
+        window.clickModule = function(element) {
+            const moduleId = element.dataset.moduleId;
+            const moduleTitle = element.textContent.trim();
+            
+            // 모든 모듈 메뉴 비활성화
+            document.querySelectorAll('.module-item').forEach(m => m.classList.remove('active'));
+            element.classList.add('active');
+            
+            window.currentModule = moduleId;
+            window.loadModuleMenus(moduleId, moduleTitle);
+            window.showStatus(`${moduleTitle} 모듈이 선택되었습니다.`);
+        };
+        
+        // 하위 메뉴 클릭 함수
+        window.clickMenu = function(element) {
+            const url = element.dataset.menuUrl;
+            const title = element.textContent.trim();
+            window.loadContent(url, title);
+            
+            // 활성 메뉴 표시
+            document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+            element.classList.add('active');
+        };
+        
+        // 모듈의 하위 메뉴 로드 (DB 데이터 사용)
+        window.loadModuleMenus = function(moduleId, moduleTitle) {
+            const sidebarTitle = document.getElementById('sidebarTitle');
+            const sidebarSubtitle = document.getElementById('sidebarSubtitle');
+            const menuContainer = document.getElementById('menuContainer');
+            
+            const moduleData = window.menuData.find(module => module.menu_01_module_id === moduleId);
+            
+            if (!moduleData) {
+                if (menuContainer) menuContainer.innerHTML = '<p>메뉴 데이터를 찾을 수 없습니다.</p>';
+                return;
+            }
+            
+            if (sidebarTitle) sidebarTitle.textContent = moduleData.menu_01_title;
+            if (sidebarSubtitle) sidebarSubtitle.textContent = moduleData.menu_01_title_eng || 'Management';
+            
+            let menuHtml = '';
+            
+            moduleData.menu_02_data.forEach(menu2 => {
+                // 2레벨 메뉴 (상위 메뉴)
+                if (menu2.menu_03_data && menu2.menu_03_data.length > 0) {
+                    // 하위 메뉴가 있는 경우 - 확장 가능한 메뉴
+                    menuHtml += `
+                        <div class="menu-group">
+                            <div class="menu-item-parent" onclick="toggleSubMenu(this)">
+                                <span>${menu2.menu_02_name}</span>
+                                <span class="menu-arrow">▶</span>
+                            </div>
+                            <div class="sub-menu-container" style="display: none;">
+                    `;
+                    
+                    menu2.menu_03_data.forEach(menu3 => {
+                        menuHtml += `
+                            <div class="menu-item sub-menu" data-menu-url="${menu3.menu_03_url || ''}" onclick="clickMenu(this)">
+                                ${menu3.menu_03_name}
+                            </div>
+                        `;
+                    });
+                    
+                    menuHtml += `
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // 하위 메뉴가 없는 경우 - 직접 클릭 가능한 메뉴
+                    menuHtml += `
+                        <div class="menu-item" data-menu-url="${menu2.menu_02_url || ''}" onclick="clickMenu(this)">
+                            ${menu2.menu_02_name}
+                        </div>
+                    `;
+                }
+            });
+            
+            if (menuContainer) {
+                menuContainer.innerHTML = menuHtml;
+            }
+        };
+        
+        // 하위 메뉴 토글
+        window.toggleSubMenu = function(element) {
+            const subMenuContainer = element.nextElementSibling;
+            const arrow = element.querySelector('.menu-arrow');
+            
+            if (subMenuContainer.style.display === 'none') {
+                subMenuContainer.style.display = 'block';
+                arrow.textContent = '▼';
+            } else {
+                subMenuContainer.style.display = 'none';
+                arrow.textContent = '▶';
+            }
+        };
+        
+        // 콘텐츠 로드 함수 (실제 URL 기반)
+        window.loadContent = function(url, title) {
+            if (!url) {
+                window.showStatus('메뉴 URL이 설정되지 않았습니다.');
+                return;
+            }
+            
+            const contentLoader = document.getElementById('content-loader');
+            const dynamicContent = document.getElementById('dynamic-content');
+            
+            if (contentLoader) contentLoader.style.display = 'block';
+            
+            // Flask 컨테이너 로드 요청
+            fetch('/common/load_container', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ menuUrl: url })
+            })
+            .then(response => {
+                if (response.headers.get('content-type')?.includes('application/json')) {
+                    return response.json();
+                } else {
+                    return response.text();
+                }
+            })
+            .then(data => {
+                if (typeof data === 'object' && data.redirect) {
+                    // MPA 리다이렉트 처리
+                    window.location.href = data.url;
+                } else {
+                    // SPA 템플릿 로드
+                    if (dynamicContent) {
+                        dynamicContent.innerHTML = data;
+                    }
+                    if (contentLoader) contentLoader.style.display = 'none';
+                    window.addTab(title, url);
+                }
+            })
+            .catch(error => {
+                console.error('콘텐츠 로드 오류:', error);
+                if (dynamicContent) {
+                    dynamicContent.innerHTML = `
+                        <h2>${title}</h2>
+                        <div style="margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 4px;">
+                            <h4>오류 발생</h4>
+                            <p>콘텐츠를 로드할 수 없습니다: ${error.message}</p>
+                            <p>URL: ${url}</p>
+                        </div>
+                    `;
+                }
+                if (contentLoader) contentLoader.style.display = 'none';
+                window.showStatus(`콘텐츠 로드 실패: ${title}`);
+            });
+        };
+        
+        // 탭 추가 함수
+        window.addTab = function(title, url) {
+            const tabContainer = document.querySelector('.tab-container');
+            if (!tabContainer) {
+                console.warn('탭 컨테이너를 찾을 수 없습니다.');
+                return;
+            }
+            
+            const existingTab = tabContainer.querySelector(`[data-tab-url="${url}"]`);
+            
+            if (!existingTab) {
+                // 새 탭 생성
+                const newTab = document.createElement('div');
+                newTab.className = 'tab';
+                newTab.dataset.tabUrl = url;
+                newTab.innerHTML = `${title} <span class="close-tab" style="margin-left: 10px; cursor: pointer;" onclick="closeTab(this)">×</span>`;
+                
+                // 기존 탭들 비활성화
+                document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+                newTab.classList.add('active');
+                
+                // 탭 클릭 이벤트
+                newTab.addEventListener('click', function(e) {
+                    if (!e.target.classList.contains('close-tab')) {
+                        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+                        this.classList.add('active');
+                        
+                        const tabUrl = this.dataset.tabUrl;
+                        const tabTitle = this.textContent.replace('×', '').trim();
+                        window.loadContent(tabUrl, tabTitle);
+                    }
+                });
+                
+                tabContainer.appendChild(newTab);
+                console.log('새 탭 추가됨:', title);
+            } else {
+                // 기존 탭 활성화
+                document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+                existingTab.classList.add('active');
+                console.log('기존 탭 활성화됨:', title);
+            }
+        };
+        
+        // 탭 닫기 함수
+        window.closeTab = function(closeButton) {
+            const tab = closeButton.parentElement;
+            const isActive = tab.classList.contains('active');
+            
+            tab.remove();
+            
+            // 활성화된 탭을 닫았다면 다른 탭을 활성화
+            if (isActive) {
+                const remainingTabs = document.querySelectorAll('.tab');
+                if (remainingTabs.length > 0) {
+                    const lastTab = remainingTabs[remainingTabs.length - 1];
+                    lastTab.classList.add('active');
+                    
+                    const tabUrl = lastTab.dataset.tabUrl;
+                    const tabTitle = lastTab.textContent.replace('×', '').trim();
+                    window.loadContent(tabUrl, tabTitle);
+                } else {
+                    // 모든 탭이 닫혔다면 기본 대시보드 표시
+                    const dynamicContent = document.getElementById('dynamic-content');
+                    if (dynamicContent) {
+                        dynamicContent.innerHTML = `
+                            <h2>📊 대시보드</h2>
+                            
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                                <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745;">
+                                    <h4 style="margin: 0 0 10px 0; color: #155724;">Flask 서버</h4>
+                                    <p style="font-size: 24px; font-weight: bold; margin: 0; color: #155724;">연동 준비</p>
+                                </div>
+                                <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; border-left: 4px solid #007bff;">
+                                    <h4 style="margin: 0 0 10px 0; color: #004085;">직원 관리</h4>
+                                    <p style="font-size: 24px; font-weight: bold; margin: 0; color: #004085;">시스템</p>
+                                </div>
+                                <div style="background: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107;">
+                                    <h4 style="margin: 0 0 10px 0; color: #856404;">호버 메뉴</h4>
+                                    <p style="font-size: 24px; font-weight: bold; margin: 0; color: #856404;">활성화</p>
+                                </div>
+                                <div style="background: #f8d7da; padding: 20px; border-radius: 8px; border-left: 4px solid #dc3545;">
+                                    <h4 style="margin: 0 0 10px 0; color: #721c24;">실시간</h4>
+                                    <p style="font-size: 24px; font-weight: bold; margin: 0; color: #721c24;">데이터</p>
+                                </div>
+                            </div>
+                            
+                            <div style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 20px;">
+                                <h3 style="margin: 0 0 20px 0;">⚡ 빠른 작업</h3>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                                    <button style="padding: 15px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; text-align: left;" onclick="loadContent('/fm/em_list', '📝 직원정보')">
+                                        📝 직원 정보 관리
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+            }
+        };
+        
+        // 로그아웃 함수
+        window.logout = function() {
+            if (confirm('로그아웃 하시겠습니까?')) {
+                fetch('/login/logout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = data.redirect;
+                    }
+                })
+                .catch(error => {
+                    console.error('로그아웃 오류:', error);
+                    alert('로그아웃 처리 중 오류가 발생했습니다.');
+                });
+            }
+        };
+        
+        // 시계 업데이트
+        window.updateClock = function() {
+            const now = new Date();
+            const timeStr = now.getFullYear() + '-' +
+                           String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                           String(now.getDate()).padStart(2, '0') + ' (' +
+                           ['일','월','화','수','목','금','토'][now.getDay()] + ') ' +
+                           String(now.getHours()).padStart(2, '0') + ':' +
+                           String(now.getMinutes()).padStart(2, '0') + ':' +
+                           String(now.getSeconds()).padStart(2, '0');
+            const clockElement = document.getElementById('current-datetime');
+            if (clockElement) {
+                clockElement.textContent = timeStr;
+            }
+        };
+        
+        // 호버 이벤트 함수들
+        window.onHeaderHover = function() {
+            console.log('헤더 호버 트리거!', window.headerPinned);
+            if (!window.headerPinned) {
+                const headerFrame = document.getElementById('headerFrame');
+                if (headerFrame) {
+                    headerFrame.classList.add('hover-show');
+                    console.log('헤더 표시됨');
+                }
+            }
+        };
+        
+        window.onHeaderLeave = function() {
+            console.log('헤더 떠남');
+            if (!window.headerPinned) {
+                const headerFrame = document.getElementById('headerFrame');
+                setTimeout(() => {
+                    if (headerFrame && !headerFrame.matches(':hover')) {
+                        headerFrame.classList.remove('hover-show');
+                        console.log('헤더 숨겨짐');
+                    }
+                }, 300);
+            }
+        };
+        
+        window.onSidebarHover = function() {
+            console.log('사이드바 호버 트리거!', window.sidebarPinned);
+            if (!window.sidebarPinned) {
+                const sidebarFrame = document.getElementById('sidebarFrame');
+                if (sidebarFrame) {
+                    sidebarFrame.classList.add('hover-show');
+                    console.log('사이드바 표시됨');
+                }
+            }
+        };
+        
+        window.onSidebarLeave = function() {
+            console.log('사이드바 떠남');
+            if (!window.sidebarPinned) {
+                const sidebarFrame = document.getElementById('sidebarFrame');
+                setTimeout(() => {
+                    if (sidebarFrame && !sidebarFrame.matches(':hover')) {
+                        sidebarFrame.classList.remove('hover-show');
+                        console.log('사이드바 숨겨짐');
+                    }
+                }, 300);
+            }
+        };
+        
+        // 초기화 함수
+        window.initialize = function() {
+            console.log('=== BASE 시스템 초기화 시작 ===');
+            
+            // 시계 시작
+            window.updateClock();
+            setInterval(window.updateClock, 1000);
+            
+            console.log('BASE: 1단계 - 사용자 정보 로드 시작');
+            
+            window.loadUserInfo()
+                .then(userInfo => {
+                    console.log('BASE: 2단계 - 사용자 정보 로드 완료', userInfo);
+                    if (userInfo && userInfo.em_id) {
+                        console.log('BASE: 3단계 - 사업소 목록 로드 시작');
+                        return window.loadPropList(userInfo.em_id)
+                            .then(propList => {
+                                console.log('BASE: 4단계 - 사업소 목록 로드 완료', propList ? propList.length : 0, '개');
+                                console.log('BASE: 5단계 - 메뉴 데이터 로드 시작');
+                                return window.loadMenuData();
+                            });
+                    }
+                    throw new Error('사용자 정보 로드 실패');
+                })
+                .then(menuData => {
+                    console.log('BASE: 6단계 - 메뉴 데이터 로드 완료', menuData ? menuData.length : 0, '개');
+                    if (menuData && menuData.length > 0) {
+                        console.log('BASE: 7단계 - 첫 번째 모듈 선택');
+                        setTimeout(() => {
+                            const firstModuleElement = document.querySelector('.module-item');
+                            if (firstModuleElement) {
+                                console.log('BASE: 8단계 - 첫 번째 모듈 클릭', firstModuleElement.textContent);
+                                window.clickModule(firstModuleElement);
+                            }
+                        }, 300);
+                        console.log('=== BASE 시스템 초기화 완료 ===');
+                        window.showStatus('시스템이 준비되었습니다. DB에서 메뉴를 로드했습니다.');
+                    }
+                })
+                .catch(error => {
+                    console.error('=== BASE 초기화 오류 ===', error);
+                    window.showStatus('시스템 초기화 중 오류가 발생했습니다: ' + error.message);
+                });
+        };
+    </script>
+</head>
+<body>
+    <div class="main-container">
+        <!-- 헤더 호버 트리거 -->
+        <div class="header-hover-trigger" id="headerHoverTrigger" 
+             onmouseenter="onHeaderHover()" 
+             title="헤더 호버 영역"></div>
+        
+        <!-- 사이드바 호버 트리거 -->
+        <div class="sidebar-hover-trigger" id="sidebarHoverTrigger" 
+             onmouseenter="onSidebarHover()" 
+             title="사이드바 호버 영역"></div>
+        
+        <!-- 헤더 프레임 -->
+        <div class="header-frame" id="headerFrame" onmouseleave="onHeaderLeave()">
+            <button class="pin-button header-pin pinned" id="headerPin" onclick="toggleHeaderPin(this)" title="헤더 고정/해제">📌</button>
+            
+            <div class="topheader-left">
+                <label for="sel_business_place"><b>사업소 선택:</b></label>
+                <select id="sel_business_place" onchange="onBusinessPlaceChange()">
+                    <option value="">사업소 로딩 중...</option>
+                </select>
+            </div>
+            
+            <!-- 모듈 메뉴 (동적으로 생성됨) -->
+            <div class="module-menu">
+                <!-- DB에서 로드된 모듈 메뉴가 여기에 동적으로 생성됩니다 -->
+            </div>
+            
+            <div class="user-info">
+                <span id="current-datetime">2025-06-17 (화) 15:30:45</span>
+                <span><b id="user-info-text">사용자: 로딩 중...</b></span>
+                <button type="button" id="btn_logout" class="toggle-btn" onclick="logout()">로그아웃</button>
+            </div>
+        </div>
+
+        <!-- 사이드바 프레임 -->
+        <div class="sidebar-frame" id="sidebarFrame" onmouseleave="onSidebarLeave()">
+            <button class="pin-button sidebar-pin pinned" id="sidebarPin" onclick="toggleSidebarPin(this)" title="사이드바 고정/해제">📌</button>
+            
+            <div class="sidebar-content">
+                <h3 id="sidebarTitle">시스템관리</h3>
+                <p id="sidebarSubtitle">System Management</p>
+                <hr style="margin: 15px 0; border-color: #6c757d;">
+                
+                <div id="menuContainer">
+                    <!-- DB에서 로드된 동적 메뉴가 여기에 표시됩니다 -->
+                    <div style="text-align: center; padding: 20px; color: #6c757d;">
+                        메뉴를 로딩 중입니다...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 콘텐츠 프레임 -->
+        <div class="content-frame" id="contentFrame">
+            <div class="content-area">
+                
+                
+                <div id="dynamic-content">
+                    {% block content %}
+                    <h2>📊 대시보드</h2>
+                    
+                    <!-- 요약 카드 -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                        <div style="background: #e8f5e8; padding: 20px; border-radius: 8px; border-left: 4px solid #28a745;">
+                            <h4 style="margin: 0 0 10px 0; color: #155724;">Flask 서버</h4>
+                            <p style="font-size: 24px; font-weight: bold; margin: 0; color: #155724;">연동 준비</p>
+                        </div>
+                        <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; border-left: 4px solid #007bff;">
+                            <h4 style="margin: 0 0 10px 0; color: #004085;">직원 관리</h4>
+                            <p style="font-size: 24px; font-weight: bold; margin: 0; color: #004085;">시스템</p>
+                        </div>
+                        <div style="background: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107;">
+                            <h4 style="margin: 0 0 10px 0; color: #856404;">호버 메뉴</h4>
+                            <p style="font-size: 24px; font-weight: bold; margin: 0; color: #856404;">활성화</p>
+                        </div>
+                        <div style="background: #f8d7da; padding: 20px; border-radius: 8px; border-left: 4px solid #dc3545;">
+                            <h4 style="margin: 0 0 10px 0; color: #721c24;">실시간</h4>
+                            <p style="font-size: 24px; font-weight: bold; margin: 0; color: #721c24;">데이터</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 빠른 작업 -->
+                    <div style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 20px;">
+                        <h3 style="margin: 0 0 20px 0;">⚡ 빠른 작업</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <button style="padding: 15px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; text-align: left;" onclick="loadContent('/fm/em_list', '📝 직원정보')">
+                                📝 직원 정보 관리
+                            </button>
+                        </div>
+                    </div>
+                    {% endblock %}
+                    
+                    <div id="content-loader" style="display: none;">
+                        <p>로딩 중...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 상태 인디케이터 -->
+    <div class="status-indicator" id="statusIndicator">
+        상태 메시지
+    </div>
+
+    {% block extra_js %}{% endblock %}
+
+    <script>
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOMContentLoaded 이벤트 발생');
+            if (typeof window.initialize === 'function') {
+                window.initialize();
+            } else {
+                console.error('initialize 함수를 찾을 수 없습니다.');
+            }
+        });
+        
+        // 이미 로드된 경우를 위한 백업
+        if (document.readyState === 'loading') {
+            console.log('문서 로딩 중 - DOMContentLoaded 대기');
+        } else {
+            console.log('문서 이미 로드됨 - 즉시 초기화');
+            setTimeout(function() {
+                if (typeof window.initialize === 'function') {
+                    window.initialize();
+                } else {
+                    console.error('initialize 함수를 찾을 수 없습니다.');
+                }
+            }, 100);
+        }
+    </script>
+</body>
+</html>

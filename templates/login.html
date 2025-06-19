@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FMS 로그인</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
+    <style>
+        /* 로고 이미지를 CSS로 대체 */
+        .logo-placeholder {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .logo-placeholder h1 {
+            font-size: 48px;
+            margin: 0;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .logo-placeholder p {
+            font-size: 16px;
+            margin: 5px 0 0 0;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <form class="login-form" id="loginForm" tabindex="-1">
+        <div id="capsLockWarning">
+            ⚠️ &lt;Caps Lock&gt;이 켜져 있습니다.<br>
+            &lt;Caps Lock&gt;이 켜져 있으면 암호를 올바르게 입력하지 못할 수 있습니다.
+        </div>
+        
+        <div class="login-container">
+            <div class="logo-container">
+                <!-- 이미지 대신 CSS 로고 사용 -->
+                <div class="logo-placeholder">
+                    <h1>FMS</h1>
+                    <p>시설관리시스템</p>
+                </div>
+            </div>
+            
+            <div class="login-box">
+                <input type="text" name="mem_id" id="mem_id" placeholder="ID 입력" required autocomplete="username">
+                
+                <div class="password-container">
+                    <input type="password" name="mem_pwd" id="mem_pwd" placeholder="Password 입력" required autocomplete="current-password">
+                </div>
+                
+                <button type="button" id="btn_login">Log in</button>
+                
+                <div class="help-link">
+                    <a href="#">• 사용자등록</a>
+                </div>
+                
+                <hr id="hr_login">
+            </div>
+            
+            <div class="footer">
+                ※ 시스템 문의 : tel) 02-2664-5354 fax) 070-8299-1170 e-mail - help@afm.co.kr<br>
+                <br>
+                <b>create by ARCHISYSTEMS</b><br>
+                <u>Designed by JG</u>
+            </div>
+        </div>
+    </form>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // ID 입력 필드에 포커스
+            document.getElementById('mem_id').focus();
+
+            // Caps Lock 감지 함수
+            function checkCapsLock(e) {
+                e.stopPropagation();
+
+                const capsLockOn = e.getModifierState && e.getModifierState('CapsLock');
+                const warning = document.getElementById('capsLockWarning');
+                const input = e.target;
+
+                if (capsLockOn && !input.value) {
+                    const rect = input.getBoundingClientRect();
+                    warning.style.left = rect.left + 'px';
+                    warning.style.top = (rect.top - 80) + 'px';
+                    warning.style.display = 'block';
+                } else {
+                    warning.style.display = 'none';
+                }
+            }
+
+            // 비밀번호 입력 필드에 이벤트 리스너 추가
+            const pwdInput = document.getElementById('mem_pwd');
+            pwdInput.addEventListener('keyup', checkCapsLock);
+            pwdInput.addEventListener('focus', checkCapsLock);
+            pwdInput.addEventListener('blur', checkCapsLock);
+
+            // 로그인 버튼 클릭 이벤트
+            document.getElementById('btn_login').addEventListener('click', function(e) {
+                e.preventDefault();
+
+                const formData = new FormData(document.getElementById('loginForm'));
+                const loginData = {
+                    mem_id: formData.get('mem_id'),
+                    mem_pwd: formData.get('mem_pwd')
+                };
+
+                if (!loginData.mem_id || !loginData.mem_pwd) {
+                    showAlert('ID와 비밀번호를 입력해주세요.', 'warning');
+                    return;
+                }
+
+                // 로딩 표시
+                const loginBtn = document.getElementById('btn_login');
+                const originalText = loginBtn.textContent;
+                loginBtn.textContent = '로그인 중...';
+                loginBtn.disabled = true;
+
+                fetch('/login/login_check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(loginData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('로그인 성공! 페이지를 이동합니다.', 'success');
+                        setTimeout(() => {
+                            window.location.href = data.redirect;
+                        }, 1000);
+                    } else {
+                        showAlert(data.message, 'error');
+                        // 로그인 버튼 복원
+                        loginBtn.textContent = originalText;
+                        loginBtn.disabled = false;
+                        // 비밀번호 필드 초기화
+                        document.getElementById('mem_pwd').value = '';
+                        document.getElementById('mem_pwd').focus();
+                    }
+                })
+                .catch(error => {
+                    console.error('로그인 오류:', error);
+                    showAlert('서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.', 'error');
+                    // 로그인 버튼 복원
+                    loginBtn.textContent = originalText;
+                    loginBtn.disabled = false;
+                });
+            });
+
+            // 엔터키 이벤트 처리
+            function handleEnterKey(e) {
+                if (e.keyCode === 13) {
+                    document.getElementById('btn_login').click();
+                }
+            }
+
+            // 입력 필드들에 엔터키 이벤트 추가
+            document.getElementById('mem_id').addEventListener('keypress', handleEnterKey);
+            document.getElementById('mem_pwd').addEventListener('keypress', handleEnterKey);
+        });
+    </script>
+</body>
+</html>
