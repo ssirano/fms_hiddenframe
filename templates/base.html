@@ -145,42 +145,33 @@
                     this.hideLoading();
                 });
             },
+           
+
             
             // 탭 콘텐츠 표시
             displayTabContent: function(html) {
                 const container = document.getElementById('dynamic-content');
                 if (container) {
-                    console.log('📄 탭 콘텐츠 표시 시작');
                     container.innerHTML = html;
-                    
-                    // JavaScript 강제 실행
+
+                    // 🔥 HTML 삽입 후 script 재실행
                     setTimeout(() => {
-                        console.log('📄 JavaScript 실행 시작');
-                        const scripts = container.querySelectorAll('script');
-                        console.log('📄 발견된 스크립트 개수:', scripts.length);
-                        
-                        scripts.forEach((script, index) => {
-                            try {
-                                eval(script.textContent);
-                                console.log(`📄 스크립트 ${index + 1} 실행 완료`);
-                            } catch (error) {
-                                console.error(`📄 스크립트 ${index + 1} 실행 오류:`, error);
-                            }
-                        });
-                        
-                        // 자동 초기화 시도
+                        // <script>를 동적으로 실행
+                        executeScriptsInContainer(container);
+
+                        // ✅ 함수가 준비됐는지 확인 후 실행
                         setTimeout(() => {
                             if (typeof window.initEmployeePage === 'function') {
-                                console.log('📄 자동으로 initEmployeePage 호출');
+                                console.log('📄 initEmployeePage 자동 호출');
                                 window.initEmployeePage();
                             } else {
-                                console.log('📄 initEmployeePage 함수 없음');
+                                console.warn('📄 initEmployeePage 함수 없음');
                             }
-                        }, 500);
-                        
-                    }, 100);
+                        }, 300); // 스크립트 실행 후 약간 대기
+                    }, 200);
                 }
             },
+
             
             // 현재 탭 상태 저장
             saveCurrentTabState: function() {
@@ -803,6 +794,20 @@
                     }, 1000);
                 });
         };
+        function executeScriptsInContainer(container) {
+            const scripts = container.querySelectorAll('script');
+            scripts.forEach(script => {
+                const newScript = document.createElement('script');
+                if (script.src) {
+                    newScript.src = script.src;
+                    newScript.async = false;
+                } else {
+                    newScript.textContent = script.textContent;
+                }
+                script.parentNode.replaceChild(newScript, script);
+            });
+        }
+        
     </script>
 
     <style>

@@ -3,6 +3,8 @@ from controllers.login import login_bp
 from controllers.common import common_bp
 from controllers.base import base_bp
 from controllers.fm.em_list import em_list_bp
+from controllers.fm.prop_list import prop_list_bp
+from controllers.fm.prop_update import prop_update_bp
 from config import get_config
 from db import test_connection, init_database
 import os
@@ -23,6 +25,8 @@ def create_app():
     app.register_blueprint(common_bp, url_prefix='/common')
     app.register_blueprint(base_bp)
     app.register_blueprint(em_list_bp, url_prefix='/fm')
+    app.register_blueprint(prop_list_bp, url_prefix='/fm')
+    app.register_blueprint(prop_update_bp, url_prefix='/fm')
     
     # 메인 라우트
     @app.route('/')
@@ -83,4 +87,4 @@ if __name__ == '__main__':
     print(f"   - 주소: http://{host}:{port}")
     print(f"   - 디버그: {debug_mode}")
     
-    app.run(debug=debug_mode, host=host, port=port)
+    app.run(debug=True, host=host, port=port)

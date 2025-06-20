@@ -241,6 +241,7 @@ console.log('📝 현재 window 객체:', {
     currentPropId: window.currentPropId,
     userInfo: window.userInfo
 });
+let isEmployeePageInitialized = false;
 
 let selectedEmployeeId = null;
 let currentSort = { field: 'basic', direction: 'asc' };
@@ -262,6 +263,12 @@ let searchParams = {
 function initEmployeePage() {
     console.log('📝 직원정보 페이지 초기화 시작');
     
+    // 중복 실행 방지
+    if (isEmployeePageInitialized) {
+        console.log('📝 이미 초기화됨, 중복 실행 방지');
+        return;
+    }
+    
     // base.html에서 em_id와 prop_id 가져오기
     const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
     const prop_id = window.currentPropId;
@@ -281,6 +288,9 @@ function initEmployeePage() {
             '<tr><td colspan="5" class="text-center text-danger">사업소를 선택해주세요.</td></tr>';
         return;
     }
+    
+    // 초기화 플래그 설정
+    isEmployeePageInitialized = true;
     
     // 검색 파라미터에 설정
     searchParams.prop_id_chk = prop_id;
@@ -306,6 +316,9 @@ window.onEmployeePagePropChange = function(newPropId) {
         return;
     }
     
+    // 초기화 플래그 리셋 (이 줄 추가)
+    isEmployeePageInitialized = false;
+    
     searchParams.prop_id_chk = newPropId;
     
     // 선택된 직원 초기화
@@ -322,7 +335,6 @@ window.onEmployeePagePropChange = function(newPropId) {
         searchEmployees();
     }, 300);
 };
-
 // 필터 옵션 로드 (파트, 직급, 상태) - JSP와 동일한 방식
 function loadFilterOptions() {
     const propId = searchParams.prop_id_chk;
@@ -572,10 +584,12 @@ function renderEmployeeDetail(employee) {
                 </td>
                 <td class="detail-label" rowspan="5" style="text-align:center;vertical-align:middle;">사진</td>
                 <td class="detail-value" rowspan="5" style="text-align:center;vertical-align:middle;">
-                    ${employee.maskname ? 
-                        `<img src="/static/images/employees/${employee.maskname}" class="employee-photo" alt="직원사진" onerror="this.src='/static/images/common/noimg.gif'">` :
-                        `<img src="/static/images/common/noimg.gif" class="employee-photo" alt="사진없음">`
-                    }
+                    <img 
+                        src="/static/images/employees/${employee.maskname || 'noimg.gif'}" 
+                        class="employee-photo" 
+                        alt="직원사진" 
+                        onerror="this.onerror=null; this.src='/static/images/common/noimg.gif';"
+                    >
                 </td>
             </tr>
             <tr>
@@ -622,7 +636,12 @@ function renderEmployeeDetail(employee) {
                 <td class="detail-label" rowspan="3" style="text-align: center; vertical-align: middle;">사인</td>
                 <td class="detail-value" rowspan="3" style="text-align: center; vertical-align: middle;">
                     ${employee.signature ? 
-                        `<img src="/static/images/signatures/${employee.signature}" class="employee-signature" alt="사인" onerror="this.src='/static/images/common/nosign.gif'">` :
+                        `<img 
+                        src="/static/images/signatures/${employee.signature || 'nosign.gif'}" 
+                        class="employee-signature" 
+                        alt="사인" 
+                        onerror="this.onerror=null; this.src='/static/images/common/nosign.gif';"
+                    />` :
                         `<img src="/static/images/common/nosign.gif" class="employee-signature" alt="사인없음">`
                     }
                 </td>
@@ -813,10 +832,6 @@ function addHistory() {
 // 페이지 초기화 실행 - 더 안정적으로 수정
 document.addEventListener('DOMContentLoaded', function() {
     console.log('📝 em_list DOMContentLoaded 이벤트 발생');
-    console.log('📝 현재 window 객체 상태:');
-    console.log('   - currentEmId:', window.currentEmId);
-    console.log('   - currentPropId:', window.currentPropId);
-    console.log('   - userInfo:', window.userInfo);
     
     // base.html 데이터 확인 함수
     function checkBaseData() {
@@ -825,15 +840,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('📝 base.html 데이터 확인 결과:', { em_id, prop_id });
         
-        if (em_id && prop_id) {
+        if (em_id && prop_id && !isEmployeePageInitialized) {
             console.log('📝 ✅ base.html 데이터 준비 완료, 초기화 시작');
             initEmployeePage();
             return true;
-        } else {
-            console.log('📝 ❌ base.html 데이터 부족:', {
-                em_id_exists: !!em_id,
-                prop_id_exists: !!prop_id
-            });
         }
         
         return false;
@@ -846,23 +856,24 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('📝 데이터 대기 시작...');
     
-    // 사용자 정보 로드 대기
+    // 사용자 정보 로드 대기 (최대 5초)
     const checkUserInfo = setInterval(() => {
         if (checkBaseData()) {
             clearInterval(checkUserInfo);
         }
-    }, 100);
+    }, 200);
     
-    // 최대 10초 대기
+    // 5초 후 타임아웃
     setTimeout(() => {
         clearInterval(checkUserInfo);
-        if (!window.currentEmId || !window.currentPropId) {
-            console.error('📝 10초 대기 후에도 base.html 데이터를 받지 못함');
+        if (!isEmployeePageInitialized && (!window.currentEmId || !window.currentPropId)) {
+            console.error('📝 5초 대기 후에도 base.html 데이터를 받지 못함');
             document.getElementById('employee-table-body').innerHTML = 
                 '<tr><td colspan="5" class="text-center text-danger">시스템 초기화 중 오류가 발생했습니다. 페이지를 새로고침해주세요.</td></tr>';
         }
-    }, 10000);
+    }, 5000);
 });
+
 
 // 초기화 함수를 전역으로 노출 (탭에서 호출 가능)
 window.initEmployeePage = initEmployeePage;
@@ -871,14 +882,6 @@ window.searchEmployees = searchEmployees;
 console.log('📝 em_list.html 스크립트 로드 완료');
 console.log('📝 initEmployeePage 함수 존재:', typeof initEmployeePage);
 
-// 즉시 실행 테스트
-setTimeout(() => {
-    console.log('📝 3초 후 테스트 실행');
-    if (window.currentEmId && window.currentPropId) {
-        console.log('📝 데이터 준비 완료, 초기화 시도');
-        initEmployeePage();
-    } else {
-        console.log('📝 데이터 아직 준비 안됨');
-    }
-}, 3000);
+
+
 </script>
