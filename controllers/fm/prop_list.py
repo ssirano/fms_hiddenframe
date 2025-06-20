@@ -22,6 +22,8 @@ def prop_entry():
             return insert_prop_data(request_data)
         elif c_type == 'update':
             return update_prop_data(request_data)
+        elif c_type == 'check_duplicate':
+            return check_prop_duplicate(request_data)
         else:
             return jsonify({'success': False, 'message': '잘못된 요청 타입입니다.'})
     
@@ -30,27 +32,27 @@ def prop_entry():
         return jsonify({'success': False, 'message': str(e)})
 
 def get_prop_list_ajax(request_data):
-    """사업장 목록 AJAX 조회 - SPA 최적화"""
+    """사업장 목록 AJAX 조회 - JSP와 동일한 검색 방식"""
     try:
         em_id = session.get('user')
         if not em_id:
             print(f"❌ 로그인 정보 없음")
             return jsonify({'success': False, 'message': '로그인이 필요합니다.'})
 
-        # 검색 파라미터 추출
+        # 검색 파라미터 추출 - JSP와 동일한 필드명
         page_no = int(request_data.get('page_no', 1))
-        keyword = request_data.get('keyword', '')
+        tb_prop_table = request_data.get('tb_prop_table', '')  # JSP와 동일한 필드명
         order_by = request_data.get('order', 'prop_id')
         desc = request_data.get('desc', 'asc')
         page_size = 20
         
         print(f"📝 사업장 검색 요청 받음:")
         print(f"   - em_id: {em_id}")
-        print(f"   - keyword: {keyword}")
+        print(f"   - tb_prop_table: {tb_prop_table}")
         print(f"   - page_no: {page_no}")
         
         with engine.connect() as conn:
-            result = get_prop_list(conn, em_id, keyword, order_by, desc, page_no, page_size)
+            result = get_prop_list(conn, em_id, tb_prop_table, order_by, desc, page_no, page_size)
             
             print(f"✅ 사업장 목록 조회 완료:")
             print(f"   - 총 건수: {result['total_count']}")
@@ -73,28 +75,47 @@ def get_prop_list_ajax(request_data):
         traceback.print_exc()
         return jsonify({'success': False, 'message': str(e)})
 
-def get_prop_list(conn, em_id, keyword, order_by, desc, page_no, page_size=20):
-    """사업장 목록 조회 공통 함수"""
+def get_prop_list(conn, em_id, tb_prop_table, order_by, desc, page_no, page_size=20):
+    """사업장 목록 조회 공통 함수 - JSP와 동일한 검색 로직"""
     
-    # WHERE 조건 구성
+    # WHERE 조건 구성 - emcontrol 기반으로 권한 체크
     where_conditions = ["e.em_id = :em_id"]
     params = {"em_id": em_id}
     
-    if keyword:
-        where_conditions.append("""(
-            c.name LIKE :keyword OR
-            c.city_id LIKE :keyword OR
-            p.name LIKE :keyword OR
-            p.prop_id LIKE :keyword OR
-            p.address1 LIKE :keyword OR
-            p.contact1 LIKE :keyword OR
-            p.use1 LIKE :keyword
-        )""")
-        params["keyword"] = f"%{keyword}%"
+    # JSP와 동일한 통합 검색 로직
+    if tb_prop_table and tb_prop_table.strip():
+        # 공백으로 분리된 검색어들 처리 (JSP와 동일)
+        search_terms = tb_prop_table.strip().split()
+        if search_terms:
+            where_conditions.append("(")
+            search_conditions = []
+            
+            for i, term in enumerate(search_terms[:50]):  # 최대 50개 검색어
+                term = term.replace("'", "''")  # SQL 인젝션 방지
+                if term:
+                    term_conditions = []
+                    param_key = f"search_term_{i}"
+                    
+                    # JSP와 동일한 검색 대상 필드들
+                    term_conditions.extend([
+                        f"(LOWER(p.prop_id)) LIKE (LOWER(:{param_key}))",
+                        f"(LOWER(p.name)) LIKE (LOWER(:{param_key}))",
+                        f"(LOWER(p.address1)) LIKE (LOWER(:{param_key}))",
+                        f"(LOWER(p.contact1)) LIKE (LOWER(:{param_key}))",
+                        f"(LOWER(p.use1)) LIKE (LOWER(:{param_key}))"
+                    ])
+                    
+                    search_conditions.append(f"({' OR '.join(term_conditions)})")
+                    params[param_key] = f"%{term}%"
+            
+            if search_conditions:
+                where_conditions.append(' AND '.join(search_conditions))
+            
+            where_conditions.append(")")
     
     where_clause = " AND ".join(where_conditions)
     
-    # ORDER BY 처리
+    # ORDER BY 처리 - JSP와 동일
     order_mapping = {
         'prop_id': 'p.prop_id',
         'city_name': 'c.name',
@@ -105,7 +126,7 @@ def get_prop_list(conn, em_id, keyword, order_by, desc, page_no, page_size=20):
         'bl_cnt': 'bl_cnt'
     }
     
-    order_field = order_mapping.get(order_by, 'p.prop_id')
+    order_field = order_mapping.get(order_by, 'p.name')  # JSP 기본 정렬
     order_direction = 'DESC' if desc == 'desc' else 'ASC'
     
     # 전체 카운트 조회
@@ -125,7 +146,7 @@ def get_prop_list(conn, em_id, keyword, order_by, desc, page_no, page_size=20):
     offset = (page_no - 1) * page_size
     params.update({"limit": page_size, "offset": offset})
     
-    # 사업장 목록 조회
+    # 사업장 목록 조회 - JSP와 동일한 필드
     list_sql = text(f"""
         SELECT 
             c.name AS city_name,
@@ -204,7 +225,7 @@ def get_prop_detail(request_data):
         return jsonify({'success': False, 'message': str(e)})
 
 def insert_prop_data(request_data):
-    """사업장 등록"""
+    """사업장 등록 - JSP와 동일한 로직"""
     try:
         em_id = session.get('user')
         if not em_id:
@@ -215,7 +236,7 @@ def insert_prop_data(request_data):
         city_id = request_data.get('city_id')
         
         if not all([prop_id, prop_name]):
-            return jsonify({'success': False, 'message': '필수 항목을 입력해주세요.'})
+            return jsonify({'success': False, 'message': '사업장 코드와 이름은 필수 항목입니다.'})
         
         from datetime import datetime
         current_time = datetime.now()
@@ -228,7 +249,7 @@ def insert_prop_data(request_data):
             if check_result['cnt'] > 0:
                 return jsonify({'success': False, 'message': '이미 존재하는 사업장 ID입니다.'})
             
-            # 삽입
+            # 삽입 - JSP와 동일한 필드들
             insert_sql = text("""
                 INSERT INTO prop (
                     prop_id, name, city_id, use1, contact1, address1, phone,
@@ -244,7 +265,7 @@ def insert_prop_data(request_data):
             params = {
                 'prop_id': prop_id,
                 'prop_name': prop_name,
-                'city_id': city_id,
+                'city_id': city_id if city_id else None,
                 'use1': request_data.get('use1', ''),
                 'contact1': request_data.get('contact1', ''),
                 'address1': request_data.get('address1', ''),
@@ -268,6 +289,27 @@ def insert_prop_data(request_data):
     except Exception as e:
         print(f"사업장 등록 오류: {str(e)}")
         return jsonify({'success': False, 'message': f'등록 중 오류가 발생했습니다: {str(e)}'})
+
+def check_prop_duplicate(request_data):
+    """사업장 코드 중복 체크"""
+    try:
+        prop_id = request_data.get('prop_id')
+        
+        if not prop_id:
+            return jsonify({'success': False, 'message': '사업장 ID가 필요합니다.'})
+        
+        with engine.connect() as conn:
+            sql = text("SELECT COUNT(*) as cnt FROM prop WHERE prop_id = :prop_id")
+            result = conn.execute(sql, {"prop_id": prop_id}).fetchone()
+            
+            return jsonify({
+                'success': True,
+                'exists': result['cnt'] > 0
+            })
+            
+    except Exception as e:
+        print(f"중복 체크 오류: {str(e)}")
+        return jsonify({'success': False, 'message': str(e)})
 
 def update_prop_data(request_data):
     """사업장 수정"""

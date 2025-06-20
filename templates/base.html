@@ -159,17 +159,54 @@
                         // <script>를 동적으로 실행
                         executeScriptsInContainer(container);
 
-                        // ✅ 함수가 준비됐는지 확인 후 실행
+                        // ✅ 개선된 자동 초기화 시스템
                         setTimeout(() => {
-                            if (typeof window.initEmployeePage === 'function') {
-                                console.log('📄 initEmployeePage 자동 호출');
-                                window.initEmployeePage();
-                            } else {
-                                console.warn('📄 initEmployeePage 함수 없음');
-                            }
-                        }, 300); // 스크립트 실행 후 약간 대기
+                            this.autoInitializePages();
+                        }, 300);
                     }, 200);
                 }
+            },
+
+            // 🆕 개선된 자동 초기화 시스템
+            autoInitializePages: function() {
+                console.log('🔄 자동 초기화 시스템 시작');
+                
+                // 1. 특정 초기화 함수들 순서대로 실행
+                const initFunctions = [
+                    'initEmployeePage',
+                    'initPropListPage', 
+                    'initPropInsertPage',
+                    'initPropUpdatePage'
+                ];
+                
+                initFunctions.forEach(funcName => {
+                    if (typeof window[funcName] === 'function') {
+                        try {
+                            console.log(`📄 ${funcName} 자동 호출`);
+                            window[funcName]();
+                        } catch (error) {
+                            console.warn(`⚠️ ${funcName} 실행 중 오류:`, error);
+                        }
+                    }
+                });
+                
+                // 2. 모듈 기반 초기화도 지원
+                const modules = [
+                    'PropListModule',
+                    'PropInsertModule', 
+                    'PropUpdateModule'
+                ];
+                
+                modules.forEach(moduleName => {
+                    if (window[moduleName] && typeof window[moduleName].init === 'function') {
+                        try {
+                            console.log(`📄 ${moduleName}.init() 자동 호출`);
+                            window[moduleName].init();
+                        } catch (error) {
+                            console.warn(`⚠️ ${moduleName}.init() 실행 중 오류:`, error);
+                        }
+                    }
+                });
             },
 
             
@@ -605,7 +642,7 @@
                     
                     menu2.menu_03_data.forEach(menu3 => {
                         menuHtml += `
-                            <div class="menu-item sub-menu" data-menu-url="${menu3.menu_03_url || ''}" onclick="clickMenu(this)">
+                            <div class="menu-item sub-menu" data-menu-url="/${menu3.menu_03_url || ''}" onclick="clickMenu(this)">
                                 ${menu3.menu_03_name}
                             </div>
                         `;
@@ -618,7 +655,7 @@
                 } else {
                     // 하위 메뉴가 없는 경우
                     menuHtml += `
-                        <div class="menu-item" data-menu-url="${menu2.menu_02_url || ''}" onclick="clickMenu(this)">
+                        <div class="menu-item" data-menu-url="/${menu2.menu_02_url || ''}" onclick="clickMenu(this)">
                             ${menu2.menu_02_name}
                         </div>
                     `;

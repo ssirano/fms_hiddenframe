@@ -126,7 +126,7 @@ def get_menu_data():
                     "menu_03_data": []
                 }
                 if menu2.get("url"):
-                    item["menu_02_url"] = menu2["url"].replace(".jsp", ".html")
+                    item["menu_02_url"] = "/" + menu2["url"].replace(".jsp", ".html") if menu2.get("url") else ""
 
                 for menu3 in sorted(level3_menus, key=lambda x: x["level1"]):
                     if menu3["level2"] == menu2["level1"]:
@@ -135,9 +135,9 @@ def get_menu_data():
                             "menu_03_name": menu3["title"],
                         }
                         if menu3.get("url"):
-                            sub_item["menu_03_url"] = menu3["url"].replace(".jsp", ".html")
+                            sub_item["menu_03_url"] = "/" + menu3["url"].replace(".jsp", ".html") if menu3.get("url") else ""
                         item["menu_03_data"].append(sub_item)
-                result.append(item)
+                result.append(item) 
             return result
 
         result_data = []

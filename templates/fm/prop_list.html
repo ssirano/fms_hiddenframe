@@ -1,4 +1,4 @@
-<!-- SPA 탭용 사업장정보 페이지 -->
+<!-- SPA 탭용 사업장정보 페이지 - JSP 동일 동작 -->
 <link rel="stylesheet" href="/static/css/common.css">
 <style>
     /* 사업장정보 페이지 전용 스타일 */
@@ -92,21 +92,20 @@
 </style>
 
 <div id="prop-list-container">
-    <h2>🏢 사업장정보 관리</h2>
+    <h2>🏢 사업장정보</h2>
 
-    <!-- 검색 폼 -->
-    <div class="search-form">
-        <div class="form-row">
-            <div class="form-group col-4">
-                <label>검색어:</label>
-                <input type="text" id="keyword_sch" class="form-control" onkeypress="if(event.keyCode==13) searchProps()" placeholder="지역, 사업장명, 주소, 연락처 등 검색">
-            </div>
-            <div class="form-group col-8" style="text-align: right; display: flex; align-items: end; gap: 5px;">
-                <button type="button" class="btn btn-primary" onclick="searchProps()">검색</button>
-                <button type="button" class="btn btn-success" onclick="insertProp()">등록</button>
-                <button type="button" class="btn btn-info" onclick="exportExcel()">엑셀저장</button>
-            </div>
-        </div>
+    <!-- 검색 폼 - JSP와 동일하게 수정 -->
+    <div style="width: 100%; margin-bottom: 20px;">
+        <table width="100%" border="0">
+            <tr>
+                <td height="35px" align="right">
+                    <input type="text" id="tb_prop_table" size="12" value="" style="text-align:left; padding: 6px 8px; border: 1px solid #ced4da; border-radius: 4px;">
+                    <button type="button" class="btn btn-primary" onclick="PropListModule.searchProps()">검색</button>
+                    <button type="button" class="btn btn-secondary" onclick="PropListModule.showAllProps()">목록보기</button>
+                    <button type="button" class="btn btn-success" onclick="PropListModule.insertProp()" style="margin-left: 10px;">등록</button>
+                </td>
+            </tr>
+        </table>
     </div>
 
     <div class="prop-layout">
@@ -122,12 +121,12 @@
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th onclick="sortBy('city_name')">지역 ↕</th>
-                            <th onclick="sortBy('prop_name')">사업장 ↕</th>
-                            <th onclick="sortBy('address1')">주소 ↕</th>
-                            <th onclick="sortBy('contact1')">연락처 ↕</th>
-                            <th onclick="sortBy('use1')">용도 ↕</th>
-                            <th onclick="sortBy('bl_cnt')">건물수 ↕</th>
+                            <th onclick="PropListModule.sortBy('city_name')" style="width:10%; cursor:pointer;">지역 ↕</th>
+                            <th onclick="PropListModule.sortBy('prop_name')" style="width:20%; cursor:pointer;">사업장 ↕</th>
+                            <th onclick="PropListModule.sortBy('address1')" style="width:30%; cursor:pointer;">주소 ↕</th>
+                            <th onclick="PropListModule.sortBy('contact1')" style="width:10%; cursor:pointer;">담당자 ↕</th>
+                            <th onclick="PropListModule.sortBy('use1')" style="width:20%; cursor:pointer;">용도 ↕</th>
+                            <th onclick="PropListModule.sortBy('bl_cnt')" style="width:10%;">건물수</th>
                         </tr>
                     </thead>
                     <tbody id="prop-table-body">
@@ -138,299 +137,314 @@
 
             <!-- 페이징 -->
             <div class="pagination" id="prop-pagination">
-                <button onclick="changePage(1)" id="btn-first">처음</button>
-                <button onclick="changePage(currentPage-1)" id="btn-prev">◀ 이전</button>
+                <button onclick="PropListModule.changePage(1)" id="btn-first">처음</button>
+                <button onclick="PropListModule.changePage(PropListModule.data.currentPage-1)" id="btn-prev">◀ 이전</button>
                 <span id="page-info">1 / 1</span>
-                <button onclick="changePage(currentPage+1)" id="btn-next">다음 ▶</button>
-                <button onclick="changePage(totalPages)" id="btn-last">마지막</button>
+                <button onclick="PropListModule.changePage(PropListModule.data.currentPage+1)" id="btn-next">다음 ▶</button>
+                <button onclick="PropListModule.changePage(PropListModule.data.totalPages)" id="btn-last">마지막</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-// 전역 변수
-console.log('🏢 prop_list.html 스크립트 시작!');
-
-let selectedPropId = null;
-let currentSort = { field: 'basic', direction: 'asc' };
-let currentPage = 1;
-let totalPages = 1;
-let totalCount = 0;
-let searchParams = {
-    keyword: '',
-    order: 'basic',
-    desc: 'asc',
-    page_no: 1
-};
-
-// 중복 실행 방지 플래그
-let isPropPageInitialized = false;
-
-// 페이지 초기화 - base.html의 em_id 직접 사용
-function initPropListPage() {
-    console.log('🏢 사업장정보 페이지 초기화 시작');
+// 🛡️ 완전한 스코프 분리 - 변수 충돌 방지
+(function() {
+    'use strict';
     
-    // 중복 실행 방지
-    if (isPropPageInitialized) {
-        console.log('🏢 이미 초기화됨, 중복 실행 방지');
-        return;
+    console.log('🏢 prop_list.html 스크립트 시작!');
+    
+    // 네임스페이스 생성 - 중복 방지
+    if (typeof window.PropListModule !== 'undefined') {
+        console.log('🏢 기존 모듈 재사용');
+        return; // 이미 로드됨
     }
     
-    // base.html에서 em_id 가져오기
-    const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
-    
-    console.log('🏢 받은 데이터:', { em_id });
-    
-    if (!em_id) {
-        console.error('🏢 em_id가 없습니다.');
-        document.getElementById('prop-table-body').innerHTML = 
-            '<tr><td colspan="6" class="text-center text-danger">사용자 정보를 불러올 수 없습니다.</td></tr>';
-        return;
-    }
-    
-    // 초기화 플래그 설정
-    isPropPageInitialized = true;
-    
-    console.log('🏢 사업장 검색 실행 시작');
-    
-    // 검색 실행
-    setTimeout(() => {
-        searchProps();
-    }, 500);
-}
+    // 모듈 생성
+    window.PropListModule = {
+        // 데이터 저장소
+        data: {
+            selectedPropId: null,
+            currentSort: { field: 'basic', direction: 'asc' },
+            currentPage: 1,
+            totalPages: 1,
+            totalCount: 0,
+            searchParams: {
+                tb_prop_table: '',
+                order: 'basic',
+                desc: 'asc',
+                page_no: 1
+            },
+            isInitialized: false
+        },
+        
+        // 초기화
+        init: function() {
+            console.log('🏢 사업장정보 페이지 초기화 시작');
+            
+            if (this.data.isInitialized) {
+                console.log('🏢 이미 초기화됨, 검색만 재실행');
+                this.searchProps();
+                return;
+            }
+            
+            const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+            console.log('🏢 받은 데이터:', { em_id });
+            
+            if (!em_id) {
+                console.error('🏢 em_id가 없습니다.');
+                this.showError('사용자 정보를 불러올 수 없습니다.');
+                return;
+            }
+            
+            this.data.isInitialized = true;
+            this.bindEvents();
+            
+            setTimeout(() => {
+                this.searchProps();
+            }, 300);
+        },
+        
+        // 이벤트 바인딩
+        bindEvents: function() {
+            const searchInput = document.getElementById('tb_prop_table');
+            if (searchInput) {
+                // 기존 이벤트 제거
+                searchInput.removeEventListener('keypress', this.handleKeyPress);
+                // 새 이벤트 추가
+                searchInput.addEventListener('keypress', this.handleKeyPress.bind(this));
+            }
+        },
+        
+        // 키보드 이벤트 처리
+        handleKeyPress: function(e) {
+            if (e.keyCode === 13) {
+                this.searchProps();
+            }
+        },
+        
+        // 사업장 검색
+        searchProps: function() {
+            console.log('🏢 사업장 검색 실행 시작');
+            
+            const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+            if (!em_id) {
+                this.showError('사용자 정보를 불러올 수 없습니다.');
+                return;
+            }
+            
+            const searchInput = document.getElementById('tb_prop_table');
+            this.data.searchParams = {
+                tb_prop_table: searchInput ? searchInput.value : '',
+                order: this.data.currentSort.field,
+                desc: this.data.currentSort.direction,
+                page_no: this.data.currentPage
+            };
+            
+            console.log('🏢 최종 검색 파라미터:', this.data.searchParams);
+            
+            this.showLoading();
+            
+            fetch('/fm/prop_entry', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    c_type: 'list',
+                    ...this.data.searchParams
+                })
+            })
+            .then(response => {
+                console.log('🏢 서버 응답 상태:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('🏢 서버 응답 데이터:', data);
+                
+                if (data.success) {
+                    console.log('🏢 사업장 데이터 수신 성공, 건수:', data.data.length);
+                    this.renderPropList(data.data);
+                    this.updatePagination(data.total_count, data.total_pages, data.current_page);
+                    this.updateBlCount(data.total_bl_cnt || 0);
+                } else {
+                    this.showError('검색 실패: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('🏢 사업장 검색 오류:', error);
+                this.showError('검색 중 오류가 발생했습니다: ' + error.message);
+            });
+        },
+        
+        // 로딩 표시
+        showLoading: function() {
+            const tbody = document.getElementById('prop-table-body');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">검색 중...</td></tr>';
+            }
+        },
+        
+        // 오류 표시
+        showError: function(message) {
+            const tbody = document.getElementById('prop-table-body');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">${message}</td></tr>`;
+            }
+        },
+        
+        // 전체 목록 보기
+        showAllProps: function() {
+            const searchInput = document.getElementById('tb_prop_table');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            this.data.currentPage = 1;
+            this.searchProps();
+        },
+        
+        // 사업장 목록 렌더링
+        renderPropList: function(props) {
+            const tbody = document.getElementById('prop-table-body');
+            if (!tbody) return;
+            
+            if (props.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center"><b>검색한 결과가 존재하지 않습니다.</b></td></tr>';
+                return;
+            }
 
-// 사업장 검색
-function searchProps() {
-    console.log('🏢 사업장 검색 실행 시작');
-    
-    // em_id 확인
-    const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
-    if (!em_id) {
-        console.error('🏢 em_id를 찾을 수 없습니다.');
-        document.getElementById('prop-table-body').innerHTML = 
-            '<tr><td colspan="6" class="text-center text-danger">사용자 정보를 불러올 수 없습니다.</td></tr>';
-        return;
-    }
-    
-    // 검색 조건 수집
-    searchParams = {
-        keyword: document.getElementById('keyword_sch').value,
-        order: currentSort.field,
-        desc: currentSort.direction,
-        page_no: currentPage
+            let html = '';
+            props.forEach(prop => {
+                const cityDisplay = prop.city_name ? `${prop.city_name}(${prop.city_id})` : '&nbsp;';
+                const propDisplay = `${prop.prop_name}(${prop.prop_id})`;
+                
+                html += `
+                    <tr class="prop-row" onclick="PropListModule.selectProp('${prop.prop_id}', this)">
+                        <td style="text-align:left; padding-left:5px;" title="${cityDisplay}">${cityDisplay}</td>
+                        <td style="text-align:left; padding-left:5px;" title="${propDisplay}">${propDisplay}</td>
+                        <td style="text-align:left; padding-left:5px;" title="${prop.address1 || ''}">${prop.address1 || '&nbsp;'}</td>
+                        <td style="text-align:left; padding-left:5px;" title="${prop.contact1 || ''}">${prop.contact1 || '&nbsp;'}</td>
+                        <td style="text-align:left; padding-left:5px;" title="${prop.use1 || ''}">${prop.use1 || '&nbsp;'}</td>
+                        <td style="text-align:right; padding-right:5px;">${prop.bl_cnt || 0}</td>
+                    </tr>
+                `;
+            });
+            
+            // 합계 행 추가
+            if (props.length > 0) {
+                const totalBlCnt = props.reduce((sum, prop) => sum + (prop.bl_cnt || 0), 0);
+                html += `
+                    <tr>
+                        <td colspan="5" style="text-align:left; padding-left:5px;">&nbsp;</td>
+                        <td style="text-align:right; padding-right:5px;" title="사업장전체수:${totalBlCnt}">합계 : ${totalBlCnt}</td>
+                    </tr>
+                `;
+            }
+            
+            tbody.innerHTML = html;
+        },
+        
+        // 페이징 정보 업데이트
+        updatePagination: function(total, pages, current) {
+            this.data.totalCount = total;
+            this.data.totalPages = pages;
+            this.data.currentPage = current;
+
+            const countText = document.getElementById('prop-count-text');
+            const pageText = document.getElementById('prop-page-text');
+            const pageInfo = document.getElementById('page-info');
+            
+            if (countText) countText.textContent = `총 ${total}개`;
+            if (pageText) pageText.textContent = `${current} / ${pages} 페이지`;
+            if (pageInfo) pageInfo.textContent = `${current} / ${pages}`;
+
+            const btnFirst = document.getElementById('btn-first');
+            const btnPrev = document.getElementById('btn-prev');
+            const btnNext = document.getElementById('btn-next');
+            const btnLast = document.getElementById('btn-last');
+            
+            if (btnFirst) btnFirst.disabled = current <= 1;
+            if (btnPrev) btnPrev.disabled = current <= 1;
+            if (btnNext) btnNext.disabled = current >= pages;
+            if (btnLast) btnLast.disabled = current >= pages;
+        },
+        
+        // 건물 합계 업데이트
+        updateBlCount: function(totalBlCnt) {
+            const blCountText = document.getElementById('prop-bl-count-text');
+            if (blCountText) {
+                blCountText.textContent = `건물 합계: ${totalBlCnt}개`;
+            }
+        },
+        
+        // 사업장 선택
+        selectProp: function(prop_id, element) {
+            document.querySelectorAll('.prop-row').forEach(row => {
+                row.classList.remove('selected');
+            });
+            
+            element.classList.add('selected');
+            this.data.selectedPropId = prop_id;
+            
+            console.log('🏢 선택된 사업장:', prop_id);
+            this.navigateToPropUpdate(prop_id);
+        },
+        
+        // 사업장 수정 페이지로 이동
+        navigateToPropUpdate: function(propId) {
+            window.selected_prop_id = propId;
+            
+            if (typeof window.loadContent === 'function') {
+                window.loadContent('/fm/prop_update.html', `사업장수정(${propId})`);
+                window.showStatus && window.showStatus(`사업장 수정 페이지를 열었습니다.`);
+            } else {
+                console.error('🏢 loadContent 함수를 찾을 수 없습니다.');
+            }
+        },
+        
+        // 정렬
+        sortBy: function(field) {
+            if (this.data.currentSort.field === field) {
+                this.data.currentSort.direction = this.data.currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.data.currentSort.field = field;
+                this.data.currentSort.direction = 'asc';
+            }
+            
+            this.data.currentPage = 1;
+            this.searchProps();
+        },
+        
+        // 페이지 변경
+        changePage: function(pageNo) {
+            if (pageNo < 1 || pageNo > this.data.totalPages) return;
+            this.data.currentPage = pageNo;
+            this.searchProps();
+        },
+        
+        // 사업장 등록
+        insertProp: function() {
+            if (typeof window.loadContent === 'function') {
+                window.loadContent('/fm/prop_insert.html', '사업장등록');
+                window.showStatus && window.showStatus('사업장 등록 페이지를 열었습니다.');
+            } else {
+                console.error('🏢 loadContent 함수를 찾을 수 없습니다.');
+            }
+        }
     };
-
-    console.log('🏢 최종 검색 파라미터:', searchParams);
-
-    // 로딩 표시
-    document.getElementById('prop-table-body').innerHTML = 
-        '<tr><td colspan="6" class="text-center">검색 중...</td></tr>';
-
-    // AJAX 요청
-    fetch('/fm/prop_entry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            c_type: 'list',
-            ...searchParams
-        })
-    })
-    .then(response => {
-        console.log('🏢 서버 응답 상태:', response.status);
-        return response.json();
-    })
-    .then(data => {
-        console.log('🏢 서버 응답 데이터:', data);
-        
-        if (data.success) {
-            console.log('🏢 사업장 데이터 수신 성공, 건수:', data.data.length);
-            renderPropList(data.data);
-            updatePagination(data.total_count, data.total_pages, data.current_page);
-            updateBlCount(data.total_bl_cnt || 0);
-        } else {
-            console.error('🏢 검색 실패:', data.message);
-            document.getElementById('prop-table-body').innerHTML = 
-                '<tr><td colspan="6" class="text-center text-danger">검색 실패: ' + data.message + '</td></tr>';
-        }
-    })
-    .catch(error => {
-        console.error('🏢 사업장 검색 오류:', error);
-        document.getElementById('prop-table-body').innerHTML = 
-            '<tr><td colspan="6" class="text-center text-danger">검색 중 오류가 발생했습니다: ' + error.message + '</td></tr>';
-    });
-}
-
-// 사업장 목록 렌더링
-function renderPropList(props) {
-    const tbody = document.getElementById('prop-table-body');
     
-    if (props.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center">검색 결과가 없습니다.</td></tr>';
-        return;
-    }
-
-    let html = '';
-    props.forEach(prop => {
-        const cityDisplay = prop.city_name ? `${prop.city_name} (${prop.city_id})` : '';
-        const propDisplay = `${prop.prop_name} (${prop.prop_id})`;
-        
-        html += `
-            <tr class="prop-row" onclick="selectProp('${prop.prop_id}', this)">
-                <td>${cityDisplay}</td>
-                <td>${propDisplay}</td>
-                <td>${prop.address1 || ''}</td>
-                <td>${prop.contact1 || ''}</td>
-                <td>${prop.use1 || ''}</td>
-                <td>${prop.bl_cnt || 0}</td>
-            </tr>
-        `;
-    });
+    // 전역 초기화 함수 등록
+    window.initPropListPage = function() {
+        window.PropListModule.init();
+    };
     
-    tbody.innerHTML = html;
-}
-
-// 페이징 정보 업데이트
-function updatePagination(total, pages, current) {
-    totalCount = total;
-    totalPages = pages;
-    currentPage = current;
-
-    // 카운트 정보 업데이트
-    document.getElementById('prop-count-text').textContent = `총 ${total}개`;
-    document.getElementById('prop-page-text').textContent = `${current} / ${pages} 페이지`;
-    document.getElementById('page-info').textContent = `${current} / ${pages}`;
-
-    // 페이징 버튼 상태 업데이트
-    document.getElementById('btn-first').disabled = current <= 1;
-    document.getElementById('btn-prev').disabled = current <= 1;
-    document.getElementById('btn-next').disabled = current >= pages;
-    document.getElementById('btn-last').disabled = current >= pages;
-}
-
-// 건물 합계 정보 업데이트
-function updateBlCount(totalBlCnt) {
-    document.getElementById('prop-bl-count-text').textContent = `건물 합계: ${totalBlCnt}개`;
-}
-
-// 사업장 선택
-function selectProp(prop_id, element) {
-    // 기존 선택 제거
-    document.querySelectorAll('.prop-row').forEach(row => {
-        row.classList.remove('selected');
-    });
-    
-    // 새로 선택
-    element.classList.add('selected');
-    selectedPropId = prop_id;
-    
-    console.log('🏢 선택된 사업장:', prop_id);
-    
-    // 사업장 수정 페이지로 이동
-    navigateToPropUpdate(prop_id);
-}
-
-// 사업장 수정 페이지로 이동
-function navigateToPropUpdate(propId) {
-    // 선택된 사업장 정보 전역 변수에 저장
-    window.selected_prop_id = propId;
-    
-    // prop_update 탭 추가
-    if (typeof window.loadContent === 'function') {
-        window.loadContent('/fm/prop_update.html', `사업장수정(${propId})`);
-        window.showStatus(`사업장 수정 페이지를 열었습니다.`);
-    } else {
-        console.error('🏢 loadContent 함수를 찾을 수 없습니다.');
-    }
-}
-
-// 정렬
-function sortBy(field) {
-    if (currentSort.field === field) {
-        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
-    } else {
-        currentSort.field = field;
-        currentSort.direction = 'asc';
-    }
-    
-    currentPage = 1; // 정렬 시 첫 페이지로
-    searchProps();
-}
-
-// 페이지 변경
-function changePage(pageNo) {
-    if (pageNo < 1 || pageNo > totalPages) return;
-    currentPage = pageNo;
-    searchProps();
-}
-
-// 사업장 등록
-function insertProp() {
-    if (window.showStatus) {
-        window.showStatus('사업장 등록 기능을 구현 중입니다.');
-    } else {
-        alert('사업장 등록 기능을 구현 중입니다.');
-    }
-}
-
-// 엑셀 저장
-function exportExcel() {
-    if (window.showStatus) {
-        window.showStatus('엑셀 저장 기능을 구현 중입니다.');
-    } else {
-        alert('엑셀 저장 기능을 구현 중입니다.');
-    }
-}
-
-// 페이지 초기화 실행
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🏢 prop_list DOMContentLoaded 이벤트 발생');
-    
-    // base.html 데이터 확인 함수
-    function checkBaseData() {
-        const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
-        
-        console.log('🏢 base.html 데이터 확인 결과:', { em_id });
-        
-        if (em_id && !isPropPageInitialized) {
-            console.log('🏢 ✅ base.html 데이터 준비 완료, 초기화 시작');
-            initPropListPage();
-            return true;
-        }
-        
-        return false;
-    }
-    
-    // 즉시 확인
-    if (checkBaseData()) {
-        return;
-    }
-    
-    console.log('🏢 데이터 대기 시작...');
-    
-    // 사용자 정보 로드 대기
-    const checkUserInfo = setInterval(() => {
-        if (checkBaseData()) {
-            clearInterval(checkUserInfo);
-        }
-    }, 200);
-    
-    // 5초 후 타임아웃
+    // 자동 초기화 (즉시 실행)
     setTimeout(() => {
-        clearInterval(checkUserInfo);
-        if (!isPropPageInitialized && !window.currentEmId) {
-            console.error('🏢 5초 대기 후에도 base.html 데이터를 받지 못함');
-            document.getElementById('prop-table-body').innerHTML = 
-                '<tr><td colspan="6" class="text-center text-danger">시스템 초기화 중 오류가 발생했습니다. 페이지를 새로고침해주세요.</td></tr>';
+        if (!window.PropListModule.data.isInitialized) {
+            console.log('🏢 자동 초기화 시작');
+            window.PropListModule.init();
         }
-    }, 5000);
-});
-
-// 초기화 함수를 전역으로 노출 (탭에서 호출 가능)
-window.initPropListPage = initPropListPage;
-window.searchProps = searchProps;
-
-// 스크립트 로드 완료 확인
-console.log('🏢 prop_list.html 스크립트 로드 완료');
-console.log('🏢 initPropListPage 함수 존재:', typeof initPropListPage);
+    }, 500);
+    
+    console.log('🏢 PropListModule 로드 완료');
+    
+})(); // 즉시 실행 함수 끝
 </script>
