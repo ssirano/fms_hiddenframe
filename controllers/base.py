@@ -9,7 +9,7 @@ base_bp = Blueprint('base', __name__)
 @base_bp.route('/main')
 @login_required
 def main():
-    """메인 페이지 - 기존 메뉴 유지하면서 직원정보 표시"""
+    """메인 페이지 - SPA 모드"""
     try:
         em_id = session.get('user')
         if not em_id:
@@ -26,9 +26,8 @@ def main():
         return render_template('base.html', 
                              user_info=user_info,
                              menu_data=menu_data,
-                             current_module_title='기초정보',
-                             current_module_title_eng='Basic Information',
-                             show_employee_list=True)  # 직원정보 표시 플래그
+                             current_module_title='시설관리시스템',
+                             current_module_title_eng='Facility Management System')
     
     except Exception as e:
         print(f"메인 페이지 로드 중 오류: {str(e)}")
@@ -37,34 +36,13 @@ def main():
 @base_bp.route('/dashboard')
 @login_required
 def dashboard():
-    """대시보드 페이지 (필요시에만 사용)"""
-    try:
-        em_id = session.get('user')
-        if not em_id:
-            return redirect(url_for('index'))
-        
-        # 사용자 정보 조회
-        user_info = get_user_info(em_id)
-        if not user_info:
-            return redirect(url_for('index'))
-        
-        # 메뉴 데이터 조회
-        menu_data = get_user_menu_data(em_id)
-        
-        return render_template('base.html', 
-                             user_info=user_info,
-                             menu_data=menu_data,
-                             current_module_title='대시보드',
-                             current_module_title_eng='Dashboard')
-    
-    except Exception as e:
-        print(f"대시보드 페이지 로드 중 오류: {str(e)}")
-        return redirect(url_for('index'))
+    """대시보드 페이지 (SPA 내에서 사용)"""
+    return redirect(url_for('base.main'))
 
 @base_bp.route('/common/get_user_info', methods=['POST'])
 @login_required
 def get_user_info_api():
-    """사용자 정보 API"""
+    """사용자 정보 API - prop_id 포함"""
     try:
         em_id = session.get('user')
         if not em_id:
@@ -74,10 +52,16 @@ def get_user_info_api():
         if not user_info:
             return jsonify({'success': False, 'message': '사용자 정보를 찾을 수 없습니다.'})
         
+        print(f"🔐 사용자 정보 API 호출:")
+        print(f"   - em_id: {user_info.get('em_id')}")
+        print(f"   - prop_id: {user_info.get('prop_id')}")
+        print(f"   - name: {user_info.get('name')}")
+        
         response_data = {
             'success': True,
             'name': user_info.get('name', ''),
             'em_id': user_info.get('em_id', ''),
+            'prop_id': user_info.get('prop_id', ''),  # prop_id 포함
             'emclass_id': user_info.get('emclass_id', '정보없음'),
         }
         
@@ -86,7 +70,7 @@ def get_user_info_api():
         return response
     
     except Exception as e:
-        print(f"사용자 정보 API 오류: {str(e)}")
+        print(f"❌ 사용자 정보 API 오류: {str(e)}")  
         return jsonify({'success': False, 'message': '서버 오류가 발생했습니다.'})
 
 @base_bp.route('/get_menu_data', methods=['POST'])
@@ -212,50 +196,35 @@ def get_prop_list_api():
 @base_bp.route('/common/load_container', methods=['POST'])
 @login_required
 def load_container():
-    """컨테이너 로드 - 완전 동적 처리 (하드코딩 매핑 없음)"""
+    """컨테이너 로드 - SPA 전용"""
     try:
         menu_url = request.json.get('menuUrl', '').split('?')[0]
-        original_url = menu_url  # 디버깅용
+        original_url = menu_url
         
-        print(f"🔵 load_container 요청: {menu_url}")
+        print(f"🔵 SPA load_container 요청: {menu_url}")
         
-        # .jsp → .html 변환 처리 (DB URL 그대로 활용)
         if menu_url.endswith('.jsp'):
             menu_url = menu_url.replace('.jsp', '.html')
             print(f"🔄 JSP → HTML 변환: {original_url} → {menu_url}")
 
-        # ===== 1단계: 템플릿 로드 시도 (SPA) =====
-        print(f"🔵 1단계: SPA 템플릿 로드 시도: {menu_url}")
+        print(f"🔵 SPA 템플릿 로드 시도: {menu_url}")
         try:
-            return render_template(menu_url)
+            template_content = render_template(menu_url)
+            print(f"✅ 템플릿 로드 성공: {menu_url}")
+            print(f"📄 템플릿 내용 길이: {len(template_content)} 문자")
+            return template_content
         except Exception as template_error:
-            print(f"🟡 SPA 템플릿 없음: {menu_url}")
+            print(f"❌ SPA 템플릿 없음: {menu_url}, 오류: {str(template_error)}")
 
-        # ===== 2단계: Flask 라우터로 리다이렉트 시도 (MPA) =====
-        print(f"🔵 2단계: MPA 라우터 리다이렉트 시도: /fm/{menu_url}")
-        
-        # URL에서 .html 제거 (선택사항)
-        # 1) .html 제거, 2) 맨 앞의 슬래시 제거
-        clean_url = menu_url.replace('.html', '').lstrip('/')
-        # 3) 이미 'fm/' 로 시작하면 중복 제거
-        if clean_url.startswith('fm/'):
-            clean_url = clean_url[len('fm/'):]
-        # 4) 최종 접두사 붙이기
-        flask_url = f'/fm/{clean_url}'
-        
-        print(f"🟢 MPA 리다이렉트: {menu_url} → {flask_url}")
-        return jsonify({
-            'redirect': True,
-            'url': flask_url,
-            'type': 'mpa'
-        })
+        # 템플릿이 없는 경우 구현 예정 페이지 반환
+        page_title = get_menu_title_from_db(original_url) or extract_page_name(menu_url)
+        coming_soon_page = create_coming_soon_page(menu_url, page_title, original_url)
+        print(f"📄 구현 예정 페이지 반환: {page_title}")
+        return coming_soon_page
 
     except Exception as e:
-        print(f"🔴 load_container 전체 오류: {str(e)}")
-        
-        # ===== 3단계: 모든 시도 실패 시 구현 예정 페이지 =====
-        page_title = get_menu_title_from_db(original_url) or extract_page_name(menu_url)
-        return create_coming_soon_page(menu_url, page_title, original_url)
+        print(f"🔴 load_container 오류: {str(e)}")
+        return create_error_page("오류", str(e))
 
 def get_user_menu_data(em_id):
     """메뉴 데이터 조회 - 완전한 DB 기반 시스템"""
@@ -327,7 +296,7 @@ def get_user_menu_data(em_id):
         return []
 
 def get_menu_hierarchy_by_module(module_id, all_menus):
-    """모듈별 메뉴 계층 구조 생성 - base.html과 호환되도록 수정"""
+    """모듈별 메뉴 계층 구조 생성"""
     module_menus = [menu for menu in all_menus if menu["module_id"] == module_id]
     level2_menus = [menu for menu in module_menus if menu["level2"] == 0]
     level3_menus = [menu for menu in module_menus if menu["level2"] != 0]
@@ -351,7 +320,6 @@ def get_menu_hierarchy_by_module(module_id, all_menus):
                     "menu_id": menu3["menu_id"],
                     "menu_03_name": menu3["title"],
                 }
-                # base.html에서 기대하는 필드명으로 수정
                 menu3_url = menu3.get("url", "")
                 if menu3_url and menu3_url.strip():
                     menu3_item["menu_03_url"] = menu3_url.replace('.jsp', '.html')
@@ -414,25 +382,25 @@ def extract_page_name(url):
     return name_mappings.get(file_name, file_name.replace('_', ' ').title())
 
 def create_coming_soon_page(menu_url, page_title, original_url):
-    """구현 예정 페이지 생성 - DB 기반"""
+    """구현 예정 페이지 생성 - SPA 최적화"""
     html_content = f"""
     <div style="padding: 40px; text-align: center; min-height: 400px;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px; border-radius: 12px; margin-bottom: 30px;">
             <h2 style="margin: 0 0 10px 0; font-size: 28px;">🚧 {page_title}</h2>
-            <p style="margin: 0; font-size: 16px; opacity: 0.9;">페이지 구현 중입니다</p>
+            <p style="margin: 0; font-size: 16px; opacity: 0.9;">SPA 모드에서 페이지 구현 중입니다</p>
         </div>
         
         <div style="background: white; border-radius: 8px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
             <div style="margin-bottom: 25px;">
-                <h3 style="color: #333; margin-bottom: 15px;">📋 구현 계획</h3>
+                <h3 style="color: #333; margin-bottom: 15px;">📋 SPA 구현 계획</h3>
                 <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; text-align: left;">
                     <ul style="margin: 0; padding-left: 20px; color: #495057;">
-                        <li>요구사항 분석 및 설계</li>
-                        <li>데이터베이스 스키마 검토</li>
-                        <li>사용자 인터페이스 설계</li>
-                        <li>백엔드 API 개발</li>
-                        <li>프론트엔드 개발</li>
-                        <li>테스트 및 품질 검증</li>
+                        <li>SPA 컴포넌트 설계</li>
+                        <li>탭 기반 상태 관리 구현</li>
+                        <li>폼 데이터 보존 기능</li>
+                        <li>AJAX API 연동</li>
+                        <li>실시간 데이터 업데이트</li>
+                        <li>사용자 경험 최적화</li>
                     </ul>
                 </div>
             </div>
@@ -443,17 +411,41 @@ def create_coming_soon_page(menu_url, page_title, original_url):
                     <code style="background: #e9ecef; padding: 8px 12px; border-radius: 4px; color: #495057; font-family: monospace; display: block;">{original_url}</code>
                 </div>
                 <div>
-                    <h4 style="color: #666; margin-bottom: 10px;">🔄 변환된 URL</h4>
+                    <h4 style="color: #666; margin-bottom: 10px;">🔄 SPA URL</h4>
                     <code style="background: #d4edda; padding: 8px 12px; border-radius: 4px; color: #155724; font-family: monospace; display: block;">{menu_url}</code>
                 </div>
             </div>
             
             <div style="border-top: 1px solid #dee2e6; padding-top: 20px;">
                 <p style="color: #6c757d; margin: 0; font-size: 14px;">
-                    💡 이 페이지는 메뉴 테이블의 URL 정보를 기반으로 자동 생성되었습니다.<br>
-                    우선순위에 따라 순차적으로 개발될 예정입니다.
+                    💡 이 페이지는 SPA 탭 시스템에서 자동 생성되었습니다.<br>
+                    폼 상태가 보존되며 다른 탭으로 이동해도 내용이 유지됩니다.
                 </p>
             </div>
+        </div>
+    </div>
+    """
+    return html_content
+
+def create_error_page(page_title, error_message):
+    """오류 페이지 생성"""
+    html_content = f"""
+    <div style="padding: 40px; text-align: center; min-height: 400px;">
+        <div style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; padding: 40px; border-radius: 12px; margin-bottom: 30px;">
+            <h2 style="margin: 0 0 10px 0; font-size: 28px;">❌ 오류 발생</h2>
+            <p style="margin: 0; font-size: 16px; opacity: 0.9;">{page_title} 페이지 로드 중 문제가 발생했습니다</p>
+        </div>
+        
+        <div style="background: white; border-radius: 8px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="color: #dc3545; margin-bottom: 15px;">오류 내용</h3>
+            <div style="background: #f8d7da; padding: 15px; border-radius: 6px; border-left: 4px solid #dc3545; text-align: left; margin-bottom: 20px;">
+                <code style="color: #721c24; font-family: monospace; word-break: break-all;">{error_message}</code>
+            </div>
+            
+            <button class="btn btn-primary" onclick="window.tabManager.reloadTab(window.tabManager.activeTabId)" 
+                    style="background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">
+                다시 시도
+            </button>
         </div>
     </div>
     """

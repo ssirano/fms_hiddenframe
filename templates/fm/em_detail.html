@@ -1,15 +1,19 @@
-<table class="detail-table" style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:12px;">
+<table class="detail-table" style="width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px;">
     <tr>
         <td class="detail-label">이름</td>
         <td class="detail-value">{{ employee.name or '' }}
-            <button type="button" class="btn btn-warning" style="float:right;padding:4px 8px;font-size:11px;" onclick="location.href='{{ url_for('fm.em_edit', em_id=employee.em_id) }}'">수정</button>
+            <button type="button" class="btn btn-warning" style="float: right; padding: 4px 8px; font-size: 11px;" 
+                    onclick="editEmployee('{{ employee.em_id }}')">수정</button>
         </td>
-        <td class="detail-label" rowspan="5" style="text-align:center;vertical-align:middle;">사진</td>
-        <td class="detail-value" rowspan="5" style="text-align:center;vertical-align:middle;">
+        <td class="detail-label" rowspan="5" style="text-align: center; vertical-align: middle;">사진</td>
+        <td class="detail-value" rowspan="5" style="text-align: center; vertical-align: middle;">
             {% if employee.maskname %}
-            <img src="{{ url_for('static', filename='images/employees/' + employee.maskname) }}" style="max-width:100px;max-height:100px;object-fit:cover;" alt="직원사진" onerror="this.src='{{ url_for('static', filename='images/common/noimg.gif') }}'">
+                <img src="/static/images/employees/{{ employee.maskname }}" 
+                     style="max-width: 100px; max-height: 100px; object-fit: cover;" 
+                     alt="직원사진" onerror="this.src='/static/images/common/noimg.gif'">
             {% else %}
-            <img src="{{ url_for('static', filename='images/common/noimg.gif') }}" style="max-width:100px;max-height:100px;" alt="사진없음">
+                <img src="/static/images/common/noimg.gif" 
+                     style="max-width: 100px; max-height: 100px;" alt="사진없음">
             {% endif %}
         </td>
     </tr>
