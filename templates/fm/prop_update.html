@@ -1,8 +1,8 @@
-<!-- SPA 탭용 사업장등록 페이지 - JSP 동일 동작 -->
+<!-- HiddenFrame 탭용 사업장수정 페이지 - JSP 동일 동작 -->
 <link rel="stylesheet" href="/static/css/common.css">
 <style>
-    /* 사업장등록 페이지 전용 스타일 */
-    .prop-insert-container {
+    /* 사업장수정 페이지 전용 스타일 */
+    .prop-update-container {
         padding: 20px;
         max-width: 1000px;
         margin: 0 auto;
@@ -62,7 +62,8 @@
     }
     
     .form-input input,
-    .form-input textarea {
+    .form-input textarea,
+    .form-input select {
         width: 100%;
         padding: 4px 6px;
         border: 1px solid #ced4da;
@@ -71,10 +72,16 @@
     }
     
     .form-input input:focus,
-    .form-input textarea:focus {
+    .form-input textarea:focus,
+    .form-input select:focus {
         border-color: #007bff;
         outline: 0;
         box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    
+    .form-input input:disabled {
+        background-color: #e9ecef;
+        opacity: 1;
     }
     
     .button-row {
@@ -114,8 +121,22 @@
         color: #dc3545;
     }
     
+    .loading-message {
+        text-align: center;
+        padding: 50px;
+        color: #6c757d;
+        font-size: 14px;
+    }
+    
+    .error-message {
+        text-align: center;
+        padding: 50px;
+        color: #dc3545;
+        font-size: 14px;
+    }
+    
     @media (max-width: 768px) {
-        .prop-insert-container {
+        .prop-update-container {
             padding: 10px;
         }
         
@@ -135,353 +156,446 @@
     }
 </style>
 
-<div class="prop-insert-container">
-    <!-- 페이지 제목 -->
-    <div class="page-title">
-        <div style="width: 32px; height: 35px; background: linear-gradient(135deg, #007bff, #0056b3); display: inline-block; border-radius: 4px; margin-right: 10px;"></div>
-        <div>
-            <div class="title-text">사업장 정보</div>
-            <div class="breadcrumb">Home > 공간및조직정보 > 사업장정보</div>
-        </div>
+<div class="prop-update-container" id="prop-update-container">
+    <!-- 로딩 메시지 -->
+    <div id="loading-section" class="loading-message">
+        <div class="spinner" style="margin: 0 auto 20px;"></div>
+        <p>사업장 정보를 불러오는 중...</p>
     </div>
+    
+    <!-- 오류 메시지 -->
+    <div id="error-section" class="error-message" style="display: none;">
+        <h3>❌ 오류 발생</h3>
+        <p id="error-message-text">사업장 정보를 불러올 수 없습니다.</p>
+        <button class="btn btn-primary" onclick="PropUpdateModule.retry()">다시 시도</button>
+        <button class="btn btn-secondary" onclick="PropUpdateModule.goBack()">뒤로 가기</button>
+    </div>
+    
+    <!-- 수정 폼 -->
+    <div id="form-section" style="display: none;">
+        <!-- 페이지 제목 -->
+        <div class="page-title">
+            <div style="width: 32px; height: 35px; background: linear-gradient(135deg, #28a745, #20c997); display: inline-block; border-radius: 4px; margin-right: 10px;"></div>
+            <div>
+                <div class="title-text">사업장 수정 <span id="prop-id-display"></span></div>
+                <div class="breadcrumb">Home > 공간및조직정보 > 사업장정보 > 수정</div>
+            </div>
+        </div>
 
-    <!-- 등록 폼 -->
-    <form id="prop-insert-form">
-        <table class="form-table">
-            <tr>
-                <td class="form-label">
-                    <b>사업장 코드</b> <span class="required">*</span>
-                </td>
-                <td class="form-input">
-                    <input type="text" id="prop_id" name="prop_id" maxlength="20" placeholder="사업장 코드를 입력하세요" required>
-                </td>
-                <td class="form-label">
-                    <b>사업장 이름</b> <span class="required">*</span>
-                </td>
-                <td class="form-input">
-                    <input type="text" id="prop_name" name="prop_name" maxlength="50" placeholder="사업장 이름을 입력하세요" required>
-                </td>
-            </tr>
-            <tr>
-                <td class="form-label">
-                    <b>도시명</b>
-                </td>
-                <td class="form-input">
-                    <select id="city_id" name="city_id">
-                        <option value="">-- 도시 선택 --</option>
-                    </select>
-                </td>
-                <td class="form-label">
-                    <b>용도</b>
-                </td>
-                <td class="form-input">
-                    <input type="text" id="use1" name="use1" maxlength="50" placeholder="용도를 입력하세요">
-                </td>
-            </tr>
-            <tr>
-                <td class="form-label">
-                    <b>주소</b>
-                </td>
-                <td class="form-input">
-                    <input type="text" id="address1" name="address1" maxlength="200" placeholder="주소를 입력하세요">
-                </td>
-                <td class="form-label">
-                    <b>담당자</b>
-                </td>
-                <td class="form-input">
-                    <input type="text" id="contact1" name="contact1" maxlength="50" placeholder="담당자를 입력하세요">
-                </td>
-            </tr>
-            <tr>
-                <td class="form-label">
-                    <b>연락처</b>
-                </td>
-                <td class="form-input">
-                    <input type="text" id="phone" name="phone" maxlength="50" placeholder="연락처를 입력하세요">
-                </td>
-                <td class="form-label">
-                    <b>연체이자율(월)</b>
-                </td>
-                <td class="form-input">
-                    <input type="number" id="overdue_monthly_rate" name="overdue_monthly_rate" step="0.01" placeholder="0.00">
-                </td>
-            </tr>
-            <tr>
-                <td class="form-label">
-                    <b>비 고</b>
-                </td>
-                <td colspan="3" class="form-input">
-                    <textarea id="description" name="description" rows="8" placeholder="비고사항을 입력하세요"></textarea>
-                </td>
-            </tr>
-            <tr>
-                <td colspan="4" class="button-row">
-                    <button type="button" class="btn-back" onclick="goBack()">뒤로</button>
-                    <button type="button" class="btn-submit" onclick="submitForm()">작성</button>
-                </td>
-            </tr>
-        </table>
-    </form>
+        <!-- 수정 폼 -->
+        <form id="prop-update-form">
+            <input type="hidden" id="prop_id" name="prop_id">
+            
+            <table class="form-table">
+                <tr>
+                    <td class="form-label">
+                        <b>사업장 코드</b>
+                    </td>
+                    <td class="form-input">
+                        <input type="text" id="prop_id_display" disabled>
+                    </td>
+                    <td class="form-label">
+                        <b>사업장 이름</b>
+                    </td>
+                    <td class="form-input">
+                        <input type="text" id="prop_name_display" disabled>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-label">
+                        <b>도시명</b>
+                    </td>
+                    <td class="form-input">
+                        <select id="city_id" name="city_id">
+                            <option value="">-- 도시 선택 --</option>
+                        </select>
+                    </td>
+                    <td class="form-label">
+                        <b>용도</b>
+                    </td>
+                    <td class="form-input">
+                        <input type="text" id="use1" name="use1" maxlength="50" placeholder="용도를 입력하세요">
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-label">
+                        <b>주소</b>
+                    </td>
+                    <td class="form-input">
+                        <input type="text" id="address1" name="address1" maxlength="200" placeholder="주소를 입력하세요">
+                    </td>
+                    <td class="form-label">
+                        <b>담당자</b>
+                    </td>
+                    <td class="form-input">
+                        <input type="text" id="contact1" name="contact1" maxlength="50" placeholder="담당자를 입력하세요">
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-label">
+                        <b>연락처</b>
+                    </td>
+                    <td class="form-input">
+                        <input type="text" id="phone" name="phone" maxlength="50" placeholder="연락처를 입력하세요">
+                    </td>
+                    <td class="form-label">
+                        <b>연체이자율(월)</b>
+                    </td>
+                    <td class="form-input">
+                        <input type="number" id="overdue_monthly_rate" name="overdue_monthly_rate" step="0.01" placeholder="0.00">
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-label">
+                        <b>연체이자율(일)</b>
+                    </td>
+                    <td class="form-input">
+                        <input type="number" id="overdue_daily_rate" name="overdue_daily_rate" step="0.01" placeholder="0.00">
+                    </td>
+                    <td class="form-label">
+                        <b>건물 수</b>
+                    </td>
+                    <td class="form-input">
+                        <input type="text" id="bl_cnt" disabled>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="form-label">
+                        <b>비 고</b>
+                    </td>
+                    <td colspan="3" class="form-input">
+                        <textarea id="description" name="description" rows="8" placeholder="비고사항을 입력하세요"></textarea>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4" class="button-row">
+                        <button type="button" class="btn-back" onclick="PropUpdateModule.goBack()">목록보기</button>
+                        <button type="button" class="btn-submit" onclick="PropUpdateModule.submitForm()">수정</button>
+                    </td>
+                </tr>
+            </table>
+        </form>
+    </div>
 </div>
 
 <script>
-// 전역 변수
-console.log('📝 prop_insert.html 스크립트 시작!');
-
-let isPropInsertPageInitialized = false;
-
-// 페이지 초기화
-function initPropInsertPage() {
-    console.log('📝 사업장등록 페이지 초기화 시작');
+// 🛡️ HiddenFrame 전용 스코프 분리
+(function() {
+    'use strict';
     
-    // 중복 실행 방지
-    if (isPropInsertPageInitialized) {
-        console.log('📝 이미 초기화됨, 중복 실행 방지');
-        return;
+    console.log('🏢 prop_update.html HiddenFrame 스크립트 시작!');
+    
+    // 네임스페이스 생성 - 중복 방지
+    if (typeof window.PropUpdateModule !== 'undefined') {
+        console.log('🏢 기존 PropUpdateModule 재사용');
+        return; // 이미 로드됨
     }
     
-    // 초기화 플래그 설정
-    isPropInsertPageInitialized = true;
-    
-    // 도시 목록 로드
-    loadCityOptions();
-    
-    // 사업장 코드 입력 필드에 포커스
-    document.getElementById('prop_id').focus();
-    
-    // 사업장 코드 중복 체크 이벤트
-    document.getElementById('prop_id').addEventListener('blur', checkPropIdDuplicate);
-    
-    console.log('📝 사업장등록 페이지 초기화 완료');
-}
-
-// 도시 목록 로드
-function loadCityOptions() {
-    console.log('📝 도시 목록 로드 시작');
-    
-    fetch('/common/get_select_options', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            table: 'city',
-            id_field: 'city_id',
-            text_field: 'name',
-            order_by: 'city_id ASC'
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        const select = document.getElementById('city_id');
-        select.innerHTML = '<option value="">-- 도시 선택 --</option>';
+    // 🆕 HiddenFrame 전용 모듈 생성
+    window.PropUpdateModule = {
+        // 데이터 저장소
+        data: {
+            propId: null,
+            propData: null,
+            isInitialized: false,
+            isLoading: false
+        },
         
-        if (data.success) {
-            data.data.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.id;
-                option.textContent = `${item.text} (${item.id})`;
-                select.appendChild(option);
-            });
-            console.log('📝 도시 목록 로드 완료:', data.data.length, '개');
-        } else {
-            console.error('📝 도시 목록 로드 실패:', data.message);
-        }
-    })
-    .catch(error => {
-        console.error('📝 도시 목록 로드 오류:', error);
-    });
-}
-
-// 사업장 코드 중복 체크
-function checkPropIdDuplicate() {
-    const propId = document.getElementById('prop_id').value.trim();
-    if (!propId) return;
-    
-    console.log('📝 사업장 코드 중복 체크:', propId);
-    
-    fetch('/fm/prop_entry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            c_type: 'check_duplicate',
-            prop_id: propId
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.exists) {
-            alert('이미 존재하는 사업장 코드입니다. 다른 코드를 입력해주세요.');
-            document.getElementById('prop_id').focus();
-            document.getElementById('prop_id').select();
-        }
-    })
-    .catch(error => {
-        console.error('📝 중복 체크 오류:', error);
-    });
-}
-
-// 폼 제출
-function submitForm() {
-    console.log('📝 사업장 등록 시작');
-    
-    // 필수 필드 검증
-    const propId = document.getElementById('prop_id').value.trim();
-    const propName = document.getElementById('prop_name').value.trim();
-    
-    if (!propId) {
-        alert('사업장 코드를 입력해주세요.');
-        document.getElementById('prop_id').focus();
-        return;
-    }
-    
-    if (!propName) {
-        alert('사업장 이름을 입력해주세요.');
-        document.getElementById('prop_name').focus();
-        return;
-    }
-    
-    // 폼 데이터 수집
-    const formData = new FormData(document.getElementById('prop-insert-form'));
-    const data = Object.fromEntries(formData.entries());
-    
-    console.log('📝 등록할 데이터:', data);
-    
-    // 로딩 표시
-    const submitBtn = document.querySelector('.btn-submit');
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = '등록 중...';
-    submitBtn.disabled = true;
-    
-    // 서버에 등록 요청
-    fetch('/fm/prop_entry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            c_type: 'insert',
-            ...data
-        })
-    })
-    .then(response => response.json())
-    .then(result => {
-        if (result.success) {
-            alert('사업장이 성공적으로 등록되었습니다.');
+        // 🆕 HiddenFrame 상태 확인
+        isVisible: function() {
+            const container = document.getElementById('prop-update-container');
+            if (!container) return false;
             
-            // 등록 성공 후 목록으로 이동
-            goToPropList();
-        } else {
-            alert('등록에 실패했습니다: ' + result.message);
-            
-            // 버튼 복원
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-        }
-    })
-    .catch(error => {
-        alert('등록 중 오류가 발생했습니다.');
-        console.error('📝 등록 오류:', error);
-        
-        // 버튼 복원
-        submitBtn.textContent = originalText;
-        submitBtn.disabled = false;
-    });
-}
-
-// 뒤로 가기 - JSP의 back() 함수와 동일
-function goBack() {
-    goToPropList();
-}
-
-// 사업장 목록으로 이동
-function goToPropList() {
-    // 선택된 사업장 정보 초기화
-    window.selected_prop_id = null;
-    
-    // prop_list 탭으로 이동
-    if (typeof window.loadContent === 'function') {
-        window.loadContent('/fm/prop_list.html', '사업장정보');
-        window.showStatus('사업장 목록으로 이동했습니다.');
-    } else {
-        console.error('📝 loadContent 함수를 찾을 수 없습니다.');
-    }
-}
-
-// 특수문자 입력 제한 (JSP의 spacipic 함수와 유사)
-function validatePropId(event) {
-    const char = String.fromCharCode(event.which);
-    const pattern = /[a-zA-Z0-9]/;
-    
-    if (!pattern.test(char)) {
-        event.preventDefault();
-        return false;
-    }
-    return true;
-}
-
-// 페이지 초기화 실행
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('📝 prop_insert DOMContentLoaded 이벤트 발생');
-    
-    // base.html 데이터 확인 함수
-    function checkBaseData() {
-        const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
-        
-        console.log('📝 base.html 데이터 확인 결과:', { em_id });
-        
-        if (em_id && !isPropInsertPageInitialized) {
-            console.log('📝 ✅ base.html 데이터 준비 완료, 초기화 시작');
-            initPropInsertPage();
+            // 부모 탭 컨테이너가 표시되고 있는지 확인
+            let current = container;
+            while (current) {
+                if (current.style && current.style.display === 'none') {
+                    return false;
+                }
+                current = current.parentElement;
+                if (current && current.classList && current.classList.contains('tab-container')) {
+                    break;
+                }
+            }
             return true;
-        }
+        },
         
-        return false;
-    }
-    
-    // 즉시 확인
-    if (checkBaseData()) {
-        return;
-    }
-    
-    console.log('📝 데이터 대기 시작...');
-    
-    // 사용자 정보 로드 대기
-    const checkUserInfo = setInterval(() => {
-        if (checkBaseData()) {
-            clearInterval(checkUserInfo);
+        // 초기화
+        init: function() {
+            console.log('🏢 사업장수정 페이지 초기화 시작 (HiddenFrame)');
+            
+            // 🆕 HiddenFrame: 숨겨진 상태에서는 초기화 하지 않음
+            if (!this.isVisible()) {
+                console.log('🏢 숨겨진 상태이므로 초기화 대기');
+                return;
+            }
+            
+            if (this.data.isInitialized) {
+                console.log('🏢 이미 초기화됨');
+                return;
+            }
+            
+            // 선택된 사업장 ID 확인
+            const propId = window.selected_prop_id;
+            console.log('🏢 선택된 사업장 ID:', propId);
+            
+            if (!propId) {
+                this.showError('사업장이 선택되지 않았습니다.');
+                return;
+            }
+            
+            this.data.propId = propId;
+            this.data.isInitialized = true;
+            
+            // 🆕 HiddenFrame 이벤트 바인딩
+            this.bindHiddenFrameEvents();
+            
+            // 데이터 로드
+            this.loadPropData();
+        },
+        
+        // 🆕 HiddenFrame 이벤트 바인딩
+        bindHiddenFrameEvents: function() {
+            const container = document.getElementById('prop-update-container');
+            if (!container) return;
+            
+            // 탭이 visible 될 때 이벤트 처리
+            container.addEventListener('tabVisible', (e) => {
+                console.log('🏢 사업장수정 탭이 다시 표시됨');
+                if (!this.data.isInitialized) {
+                    this.init();
+                }
+            });
+        },
+        
+        // 사업장 데이터 로드
+        loadPropData: function() {
+            if (this.data.isLoading) return;
+            
+            console.log('🏢 사업장 데이터 로드 시작:', this.data.propId);
+            
+            this.data.isLoading = true;
+            this.showLoading();
+            
+            // 도시 목록과 사업장 정보를 병렬로 로드
+            Promise.all([
+                this.loadCityOptions(),
+                this.loadPropDetail()
+            ])
+            .then(() => {
+                console.log('🏢 모든 데이터 로드 완료');
+                this.showForm();
+                this.data.isLoading = false;
+            })
+            .catch((error) => {
+                console.error('🏢 데이터 로드 오류:', error);
+                this.showError('데이터를 불러오는 중 오류가 발생했습니다: ' + error.message);
+                this.data.isLoading = false;
+            });
+        },
+        
+        // 도시 목록 로드
+        loadCityOptions: function() {
+            return fetch('/common/get_select_options', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    table: 'city',
+                    id_field: 'city_id',
+                    text_field: 'name',
+                    order_by: 'city_id ASC'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const select = document.getElementById('city_id');
+                if (select) {
+                    select.innerHTML = '<option value="">-- 도시 선택 --</option>';
+                    
+                    if (data.success) {
+                        data.data.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.id;
+                            option.textContent = `${item.text} (${item.id})`;
+                            select.appendChild(option);
+                        });
+                        console.log('🏢 도시 목록 로드 완료:', data.data.length, '개');
+                    }
+                }
+            });
+        },
+        
+        // 사업장 상세 정보 로드
+        loadPropDetail: function() {
+            return fetch('/fm/prop_update_entry', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    c_type: 'detail',
+                    prop_id: this.data.propId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.data.propData = data.data;
+                    console.log('🏢 사업장 정보 로드 완료:', data.data);
+                    this.fillForm(data.data);
+                } else {
+                    throw new Error(data.message || '사업장 정보를 불러올 수 없습니다.');
+                }
+            });
+        },
+        
+        // 폼에 데이터 채우기
+        fillForm: function(propData) {
+            // 기본 정보 표시
+            this.setElementValue('prop_id', propData.prop_id);
+            this.setElementValue('prop_id_display', propData.prop_id);
+            this.setElementValue('prop_name_display', propData.prop_name);
+            
+            // 제목 업데이트
+            const titleDisplay = document.getElementById('prop-id-display');
+            if (titleDisplay) {
+                titleDisplay.textContent = `(${propData.prop_id})`;
+            }
+            
+            // 수정 가능한 필드들
+            this.setElementValue('city_id', propData.city_id);
+            this.setElementValue('use1', propData.use1);
+            this.setElementValue('address1', propData.address1);
+            this.setElementValue('contact1', propData.contact1);
+            this.setElementValue('phone', propData.phone);
+            this.setElementValue('overdue_monthly_rate', propData.overdue_monthly_rate);
+            this.setElementValue('overdue_daily_rate', propData.overdue_daily_rate);
+            this.setElementValue('description', propData.description);
+            this.setElementValue('bl_cnt', propData.bl_cnt || 0);
+            
+            console.log('🏢 폼 데이터 채우기 완료');
+        },
+        
+        // 헬퍼 함수: 요소 값 설정
+        setElementValue: function(id, value) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.value = value || '';
+            }
+        },
+        
+        // 화면 표시 제어
+        showLoading: function() {
+            document.getElementById('loading-section').style.display = 'block';
+            document.getElementById('error-section').style.display = 'none';
+            document.getElementById('form-section').style.display = 'none';
+        },
+        
+        showError: function(message) {
+            document.getElementById('loading-section').style.display = 'none';
+            document.getElementById('error-section').style.display = 'block';
+            document.getElementById('form-section').style.display = 'none';
+            
+            const errorText = document.getElementById('error-message-text');
+            if (errorText) {
+                errorText.textContent = message;
+            }
+        },
+        
+        showForm: function() {
+            document.getElementById('loading-section').style.display = 'none';
+            document.getElementById('error-section').style.display = 'none';
+            document.getElementById('form-section').style.display = 'block';
+        },
+        
+        // 폼 제출
+        submitForm: function() {
+            console.log('🏢 사업장 수정 시작');
+            
+            // 폼 데이터 수집
+            const formData = new FormData(document.getElementById('prop-update-form'));
+            const data = Object.fromEntries(formData.entries());
+            
+            console.log('🏢 수정할 데이터:', data);
+            
+            // 로딩 표시
+            const submitBtn = document.querySelector('.btn-submit');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = '수정 중...';
+            submitBtn.disabled = true;
+            
+            // 서버에 수정 요청
+            fetch('/fm/prop_update_entry', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    c_type: 'save',
+                    ...data
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert('사업장 정보가 성공적으로 수정되었습니다.');
+                    
+                    // 수정 성공 후 목록으로 이동
+                    this.goToPropList();
+                } else {
+                    alert('수정에 실패했습니다: ' + result.message);
+                    
+                    // 버튼 복원
+                    submitBtn.textContent = originalText;
+                    submitBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                alert('수정 중 오류가 발생했습니다.');
+                console.error('🏢 수정 오류:', error);
+                
+                // 버튼 복원
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            });
+        },
+        
+        // 뒤로 가기
+        goBack: function() {
+            this.goToPropList();
+        },
+        
+        // 다시 시도
+        retry: function() {
+            this.data.isLoading = false;
+            this.loadPropData();
+        },
+        
+        // 🆕 HiddenFrame: 사업장 목록으로 이동
+        goToPropList: function() {
+            // 선택된 사업장 정보 초기화
+            window.selected_prop_id = null;
+            
+            // prop_list 탭으로 이동
+            if (typeof window.loadContent === 'function') {
+                window.loadContent('/fm/prop_list.html', '🏢 사업장정보');
+                window.showStatus && window.showStatus('사업장 목록으로 이동했습니다.');
+            } else {
+                console.error('🏢 loadContent 함수를 찾을 수 없습니다.');
+            }
         }
-    }, 200);
+    };
     
-    // 5초 후 타임아웃
+    // 전역 초기화 함수 등록
+    window.initPropUpdatePage = function() {
+        window.PropUpdateModule.init();
+    };
+    
+    // 🆕 HiddenFrame: 자동 초기화 (즉시 실행)
     setTimeout(() => {
-        clearInterval(checkUserInfo);
-        if (!isPropInsertPageInitialized) {
-            console.error('📝 5초 대기 후에도 base.html 데이터를 받지 못함');
-            // 그래도 초기화 시도
-            initPropInsertPage();
+        if (!window.PropUpdateModule.data.isInitialized) {
+            console.log('🏢 자동 초기화 시작 (HiddenFrame)');
+            window.PropUpdateModule.init();
         }
-    }, 5000);
-});
-
-// 사업장 코드 입력 제한 이벤트 추가
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(() => {
-        const propIdInput = document.getElementById('prop_id');
-        if (propIdInput) {
-            propIdInput.addEventListener('keypress', validatePropId);
-        }
-    }, 100);
-});
-
-// base.html의 탭 시스템에서 호출될 수 있도록 추가
-setTimeout(() => {
-    if (typeof window.initPropInsertPage !== 'function' && !isPropInsertPageInitialized) {
-        console.log('📝 탭 로드 감지 - 강제 초기화 시작');
-        initPropInsertPage();
-    }
-}, 500);
-
-// 초기화 함수를 전역으로 노출 (탭에서 호출 가능)
-window.initPropInsertPage = initPropInsertPage;
-
-// 스크립트 로드 완료 확인
-console.log('📝 prop_insert.html 스크립트 로드 완료');
-console.log('📝 initPropInsertPage 함수 존재:', typeof initPropInsertPage);
+    }, 500);
+    
+    console.log('🏢 PropUpdateModule 로드 완료 (HiddenFrame)');
+    
+})(); // 즉시 실행 함수 끝
 </script>

@@ -1,0 +1,513 @@
+<!-- SPA 탭용 건물정보 페이지 -->
+<link rel="stylesheet" href="/static/css/common.css">
+<style>
+    /* 건물정보 페이지 전용 스타일 */
+    .bl-row { 
+        cursor: pointer; 
+        transition: background-color 0.15s ease-in-out;
+    }
+    
+    .bl-row:hover { 
+        background-color: #f0f7fc !important; 
+    }
+    
+    .bl-row.selected { 
+        background-color: #e3f2fd !important; 
+        border-left: 3px solid #007bff;
+    }
+    
+    .detail-section {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .bl-layout {
+        display: grid; 
+        grid-template-columns: 1fr; 
+        gap: 20px;
+        margin-top: 20px;
+    }
+    
+    .bl-list-container {
+        position: relative;
+    }
+    
+    .bl-count-info {
+        margin-bottom: 10px;
+        padding: 8px 12px;
+        background: #f8f9fa;
+        border-radius: 4px;
+        font-size: 13px;
+        color: #495057;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .no-results {
+        text-align: center;
+        padding: 40px 20px;
+        color: #6c757d;
+        font-style: italic;
+    }
+    
+    .tab-loading {
+        text-align: center; 
+        padding: 50px; 
+        color: #6c757d;
+    }
+    
+    .tab-error {
+        text-align: center; 
+        padding: 50px; 
+        color: #dc3545;
+    }
+    
+    @media (max-width: 992px) {
+        .bl-count-info {
+            flex-direction: column;
+            gap: 5px;
+            text-align: center;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .detail-section {
+            padding: 10px;
+        }
+        
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .data-table {
+            min-width: 800px;
+        }
+    }
+</style>
+
+<div id="bl-list-container">
+    <h2>🏢 건물정보</h2>
+
+    <!-- 검색 폼 -->
+    <div class="search-form">
+        <div class="form-row">
+            <div class="form-group col-3">
+                <label>건물 선택:</label>
+                <select id="bl_id_chk" class="form-control" onchange="BlListModule.searchBls()">
+                    <option value="">-- 건물선택 --</option>
+                </select>
+            </div>
+            <div class="form-group col-6">
+                <label>통합검색:</label>
+                <input type="text" id="input_search" class="form-control" onkeypress="if(event.keyCode==13) BlListModule.searchBls()" placeholder="건물, 주소, 연락처 검색">
+            </div>
+            <div class="form-group col-3" style="text-align: right; display: flex; align-items: end; gap: 5px;">
+                <button type="button" class="btn btn-primary" onclick="BlListModule.searchBls()">검색</button>
+                <button type="button" class="btn btn-secondary" onclick="BlListModule.showAllBls()">목록보기</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="bl-layout">
+        <!-- 건물 목록 -->
+        <div class="bl-list-container">
+            <div class="bl-count-info">
+                <span id="bl-count-text">총 0개</span>
+                <span id="bl-page-text">1 / 1 페이지</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th onclick="BlListModule.sortBy('bl_name')" style="width:20%; cursor:pointer;">건물 ↕</th>
+                            <th onclick="BlListModule.sortBy('contact_phone')" style="width:15%; cursor:pointer;">연락처 ↕</th>
+                            <th onclick="BlListModule.sortBy('area_total')" style="width:15%; cursor:pointer;">연면적 ↕</th>
+                            <th onclick="BlListModule.sortBy('count_fl')" style="width:10%; cursor:pointer;">지상 ↕</th>
+                            <th onclick="BlListModule.sortBy('count_bf')" style="width:10%; cursor:pointer;">지하 ↕</th>
+                            <th onclick="BlListModule.sortBy('address1')" style="width:30%; cursor:pointer;">주소 ↕</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bl-table-body">
+                        <tr><td colspan="6" class="text-center">로딩 중...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 페이징 -->
+            <div class="pagination" id="bl-pagination">
+                <button onclick="BlListModule.changePage(1)" id="btn-first">처음</button>
+                <button onclick="BlListModule.changePage(BlListModule.data.currentPage-1)" id="btn-prev">◀ 이전</button>
+                <span id="page-info">1 / 1</span>
+                <button onclick="BlListModule.changePage(BlListModule.data.currentPage+1)" id="btn-next">다음 ▶</button>
+                <button onclick="BlListModule.changePage(BlListModule.data.totalPages)" id="btn-last">마지막</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 🛡️ 완전한 스코프 분리 - 변수 충돌 방지
+(function() {
+    'use strict';
+    
+    console.log('🏢 bl_list.html 스크립트 시작!');
+    
+    // 네임스페이스 생성 - 중복 방지
+    if (typeof window.BlListModule !== 'undefined') {
+        console.log('🏢 기존 모듈 재사용');
+        return; // 이미 로드됨
+    }
+    
+    // 모듈 생성
+    window.BlListModule = {
+        // 데이터 저장소
+        data: {
+            selectedBlId: null,
+            currentSort: { field: 'bl_name', direction: 'asc' },
+            currentPage: 1,
+            totalPages: 1,
+            totalCount: 0,
+            searchParams: {
+                bl_id: '',
+                keyword: '',
+                sort_column: 'bl_name',
+                sort_direction: 'asc',
+                page_number: 1,
+                page_size: 20
+            },
+            isInitialized: false
+        },
+        
+        // 초기화
+        init: function() {
+            console.log('🏢 건물정보 페이지 초기화 시작');
+            
+            if (this.data.isInitialized) {
+                console.log('🏢 이미 초기화됨, 검색만 재실행');
+                this.searchBls();
+                return;
+            }
+            
+            const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+            const prop_id = window.currentPropId;
+            
+            console.log('🏢 받은 데이터:', { em_id, prop_id });
+            
+            if (!em_id) {
+                console.error('🏢 em_id가 없습니다.');
+                this.showError('사용자 정보를 불러올 수 없습니다.');
+                return;
+            }
+            
+            if (!prop_id) {
+                console.error('🏢 prop_id가 없습니다.');
+                this.showError('사업소를 선택해주세요.');
+                return;
+            }
+            
+            this.data.isInitialized = true;
+            this.bindEvents();
+            this.loadBlSelectOptions();
+            
+            setTimeout(() => {
+                this.searchBls();
+            }, 300);
+        },
+        
+        // 이벤트 바인딩
+        bindEvents: function() {
+            const searchInput = document.getElementById('input_search');
+            if (searchInput) {
+                searchInput.removeEventListener('keypress', this.handleKeyPress);
+                searchInput.addEventListener('keypress', this.handleKeyPress.bind(this));
+            }
+        },
+        
+        // 키보드 이벤트 처리
+        handleKeyPress: function(e) {
+            if (e.keyCode === 13) {
+                this.searchBls();
+            }
+        },
+        
+        // 건물 선택 옵션 로드
+        loadBlSelectOptions: function() {
+            const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+            const prop_id = window.currentPropId;
+            
+            if (!em_id || !prop_id) return;
+            
+            fetch('/common/get_bl_list', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ em_id: em_id, prop_id: prop_id })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const select = document.getElementById('bl_id_chk');
+                select.innerHTML = '<option value="">-- 건물선택 --</option>';
+                
+                if (data.success && data.data) {
+                    data.data.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.bl_id;
+                        option.textContent = item.bl_name;
+                        select.appendChild(option);
+                    });
+                    console.log('🏢 건물 선택 옵션 로드 완료:', data.data.length, '개');
+                }
+            })
+            .catch(error => {
+                console.error('🏢 건물 선택 옵션 로드 오류:', error);
+            });
+        },
+        
+        // 건물 검색
+        searchBls: function() {
+            console.log('🏢 건물 검색 실행 시작');
+            
+            const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+            const prop_id = window.currentPropId;
+            
+            if (!em_id) {
+                this.showError('사용자 정보를 불러올 수 없습니다.');
+                return;
+            }
+            
+            if (!prop_id) {
+                this.showError('사업소를 선택해주세요.');
+                return;
+            }
+            
+            const blSelect = document.getElementById('bl_id_chk');
+            const searchInput = document.getElementById('input_search');
+            
+            this.data.searchParams = {
+                em_id: em_id,
+                prop_id: prop_id,
+                bl_id: blSelect ? blSelect.value : '',
+                keyword: searchInput ? searchInput.value : '',
+                sort_column: this.data.currentSort.field,
+                sort_direction: this.data.currentSort.direction,
+                page_number: this.data.currentPage,
+                page_size: 20
+            };
+            
+            console.log('🏢 최종 검색 파라미터:', this.data.searchParams);
+            
+            this.showLoading();
+            
+            fetch('/fm/bl_entry', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    c_type: 'list',
+                    ...this.data.searchParams
+                })
+            })
+            .then(response => {
+                console.log('🏢 서버 응답 상태:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('🏢 서버 응답 데이터:', data);
+                
+                if (data.success) {
+                    console.log('🏢 건물 데이터 수신 성공, 건수:', data.result_data.length);
+                    this.renderBlList(data.result_data);
+                    this.updatePagination(data.total_count, data.total_pages, data.current_page);
+                } else {
+                    this.showError('검색 실패: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('🏢 건물 검색 오류:', error);
+                this.showError('검색 중 오류가 발생했습니다: ' + error.message);
+            });
+        },
+        
+        // 로딩 표시
+        showLoading: function() {
+            const tbody = document.getElementById('bl-table-body');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">검색 중...</td></tr>';
+            }
+        },
+        
+        // 오류 표시
+        showError: function(message) {
+            const tbody = document.getElementById('bl-table-body');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">${message}</td></tr>`;
+            }
+        },
+        
+        // 전체 목록 보기
+        showAllBls: function() {
+            const blSelect = document.getElementById('bl_id_chk');
+            const searchInput = document.getElementById('input_search');
+            
+            if (blSelect) blSelect.value = '';
+            if (searchInput) searchInput.value = '';
+            
+            this.data.currentPage = 1;
+            this.searchBls();
+        },
+        
+        // 건물 목록 렌더링
+        renderBlList: function(bls) {
+            const tbody = document.getElementById('bl-table-body');
+            if (!tbody) return;
+            
+            if (bls.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center"><b>검색한 결과가 존재하지 않습니다.</b></td></tr>';
+                return;
+            }
+
+            let html = '';
+            bls.forEach(bl => {
+                html += `
+                    <tr class="bl-row" onclick="BlListModule.selectBl('${bl.bl_id}', this)">
+                        <td style="text-align:left; padding-left:5px;" title="${bl.bl_name || ''}">${bl.bl_name || '&nbsp;'}</td>
+                        <td style="text-align:left; padding-left:5px;" title="${bl.contact_phone || ''}">${bl.contact_phone || '&nbsp;'}</td>
+                        <td style="text-align:right; padding-right:5px;" title="${bl.area_total || ''}">${this.formatNumber(bl.area_total) || '&nbsp;'}</td>
+                        <td style="text-align:center;" title="${bl.count_fl || ''}">${bl.count_fl || '&nbsp;'}</td>
+                        <td style="text-align:center;" title="${bl.count_bf || ''}">${bl.count_bf || '&nbsp;'}</td>
+                        <td style="text-align:left; padding-left:5px;" title="${bl.address1 || ''}">${bl.address1 || '&nbsp;'}</td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+        },
+        
+        // 숫자 포맷팅
+        formatNumber: function(num) {
+            if (num === null || num === undefined || num === '') return '';
+            return Number(num).toLocaleString();
+        },
+        
+        // 페이징 정보 업데이트
+        updatePagination: function(total, pages, current) {
+            this.data.totalCount = total;
+            this.data.totalPages = pages;
+            this.data.currentPage = current;
+
+            const countText = document.getElementById('bl-count-text');
+            const pageText = document.getElementById('bl-page-text');
+            const pageInfo = document.getElementById('page-info');
+            
+            if (countText) countText.textContent = `총 ${total}개`;
+            if (pageText) pageText.textContent = `${current} / ${pages} 페이지`;
+            if (pageInfo) pageInfo.textContent = `${current} / ${pages}`;
+
+            const btnFirst = document.getElementById('btn-first');
+            const btnPrev = document.getElementById('btn-prev');
+            const btnNext = document.getElementById('btn-next');
+            const btnLast = document.getElementById('btn-last');
+            
+            if (btnFirst) btnFirst.disabled = current <= 1;
+            if (btnPrev) btnPrev.disabled = current <= 1;
+            if (btnNext) btnNext.disabled = current >= pages;
+            if (btnLast) btnLast.disabled = current >= pages;
+        },
+        
+        // 건물 선택
+        selectBl: function(bl_id, element) {
+            document.querySelectorAll('.bl-row').forEach(row => {
+                row.classList.remove('selected');
+            });
+            
+            element.classList.add('selected');
+            this.data.selectedBlId = bl_id;
+            
+            console.log('🏢 선택된 건물:', bl_id);
+            this.navigateToBlUpdate(bl_id);
+        },
+        
+        // 건물 수정 페이지로 이동
+        navigateToBlUpdate: function(blId) {
+            window.selected_bl_id = blId;
+            
+            if (typeof window.loadContent === 'function') {
+                window.loadContent('/fm/bl_update.html', `건물수정(${blId})`);
+                window.showStatus && window.showStatus(`건물 수정 페이지를 열었습니다.`);
+            } else {
+                console.error('🏢 loadContent 함수를 찾을 수 없습니다.');
+            }
+        },
+        
+        // 정렬
+        sortBy: function(field) {
+            if (this.data.currentSort.field === field) {
+                this.data.currentSort.direction = this.data.currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.data.currentSort.field = field;
+                this.data.currentSort.direction = 'asc';
+            }
+            
+            this.data.currentPage = 1;
+            this.searchBls();
+        },
+        
+        // 페이지 변경
+        changePage: function(pageNo) {
+            if (pageNo < 1 || pageNo > this.data.totalPages) return;
+            this.data.currentPage = pageNo;
+            this.searchBls();
+        }
+    };
+    
+    // 사업소 변경 감지
+    window.onBlListPagePropChange = function(newPropId) {
+        console.log('🏢 사업소 변경 감지:', newPropId);
+        
+        if (!newPropId) {
+            console.warn('🏢 새로운 prop_id가 없습니다.');
+            return;
+        }
+        
+        // 초기화 플래그 리셋
+        window.BlListModule.data.isInitialized = false;
+        
+        // 선택된 건물 초기화
+        window.BlListModule.data.selectedBlId = null;
+        
+        // 건물 선택 옵션 다시 로드
+        window.BlListModule.loadBlSelectOptions();
+        
+        // 🔥 즉시 검색 실행 - 딜레이 없이
+        console.log('🏢 사업소 변경 후 즉시 검색 실행');
+        window.BlListModule.searchBls();
+        
+        // 추가로 약간의 딜레이 후에도 한 번 더 실행 (안전장치)
+        setTimeout(() => {
+            console.log('🏢 사업소 변경 후 추가 검색 실행');
+            window.BlListModule.searchBls();
+        }, 500);
+    };
+    
+    // 전역 초기화 함수 등록
+    window.initBlListPage = function() {
+        window.BlListModule.init();
+    };
+    
+    // 자동 초기화 (즉시 실행)
+    setTimeout(() => {
+        if (!window.BlListModule.data.isInitialized) {
+            console.log('🏢 자동 초기화 시작');
+            window.BlListModule.init();
+        }
+    }, 500);
+    
+    console.log('🏢 BlListModule 로드 완료');
+    
+})(); // 즉시 실행 함수 끝
+</script>

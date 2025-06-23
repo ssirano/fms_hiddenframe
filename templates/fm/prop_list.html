@@ -1,4 +1,4 @@
-<!-- SPA 탭용 사업장정보 페이지 - JSP 동일 동작 -->
+<!-- HiddenFrame 탭용 사업장정보 페이지 - JSP 동일 동작 -->
 <link rel="stylesheet" href="/static/css/common.css">
 <style>
     /* 사업장정보 페이지 전용 스타일 */
@@ -102,7 +102,6 @@
                     <input type="text" id="tb_prop_table" size="12" value="" style="text-align:left; padding: 6px 8px; border: 1px solid #ced4da; border-radius: 4px;">
                     <button type="button" class="btn btn-primary" onclick="PropListModule.searchProps()">검색</button>
                     <button type="button" class="btn btn-secondary" onclick="PropListModule.showAllProps()">목록보기</button>
-                    <button type="button" class="btn btn-success" onclick="PropListModule.insertProp()" style="margin-left: 10px;">등록</button>
                 </td>
             </tr>
         </table>
@@ -148,19 +147,19 @@
 </div>
 
 <script>
-// 🛡️ 완전한 스코프 분리 - 변수 충돌 방지
+// 🛡️ HiddenFrame 전용 스코프 분리 - 변수 충돌 방지
 (function() {
     'use strict';
     
-    console.log('🏢 prop_list.html 스크립트 시작!');
+    console.log('🏢 prop_list.html HiddenFrame 스크립트 시작!');
     
     // 네임스페이스 생성 - 중복 방지
     if (typeof window.PropListModule !== 'undefined') {
-        console.log('🏢 기존 모듈 재사용');
+        console.log('🏢 기존 PropListModule 재사용');
         return; // 이미 로드됨
     }
     
-    // 모듈 생성
+    // 🆕 HiddenFrame 전용 모듈 생성
     window.PropListModule = {
         // 데이터 저장소
         data: {
@@ -178,9 +177,34 @@
             isInitialized: false
         },
         
+        // 🆕 HiddenFrame 상태 확인
+        isVisible: function() {
+            const container = document.getElementById('prop-list-container');
+            if (!container) return false;
+            
+            // 부모 탭 컨테이너가 표시되고 있는지 확인
+            let current = container;
+            while (current) {
+                if (current.style && current.style.display === 'none') {
+                    return false;
+                }
+                current = current.parentElement;
+                if (current && current.classList && current.classList.contains('tab-container')) {
+                    break;
+                }
+            }
+            return true;
+        },
+        
         // 초기화
         init: function() {
-            console.log('🏢 사업장정보 페이지 초기화 시작');
+            console.log('🏢 사업장정보 페이지 초기화 시작 (HiddenFrame)');
+            
+            // 🆕 HiddenFrame: 숨겨진 상태에서는 초기화 하지 않음
+            if (!this.isVisible()) {
+                console.log('🏢 숨겨진 상태이므로 초기화 대기');
+                return;
+            }
             
             if (this.data.isInitialized) {
                 console.log('🏢 이미 초기화됨, 검색만 재실행');
@@ -198,15 +222,32 @@
             }
             
             this.data.isInitialized = true;
-            this.bindEvents();
+            
+            // 🆕 HiddenFrame 이벤트 바인딩
+            this.bindHiddenFrameEvents();
+            this.bindKeyboardEvents();
             
             setTimeout(() => {
                 this.searchProps();
             }, 300);
         },
         
+        // 🆕 HiddenFrame 이벤트 바인딩
+        bindHiddenFrameEvents: function() {
+            const container = document.getElementById('prop-list-container');
+            if (!container) return;
+            
+            // 탭이 visible 될 때 이벤트 처리
+            container.addEventListener('tabVisible', (e) => {
+                console.log('🏢 사업장정보 탭이 다시 표시됨');
+                if (!this.data.isInitialized) {
+                    this.init();
+                }
+            });
+        },
+        
         // 이벤트 바인딩
-        bindEvents: function() {
+        bindKeyboardEvents: function() {
             const searchInput = document.getElementById('tb_prop_table');
             if (searchInput) {
                 // 기존 이벤트 제거
@@ -225,7 +266,13 @@
         
         // 사업장 검색
         searchProps: function() {
-            console.log('🏢 사업장 검색 실행 시작');
+            console.log('🏢 사업장 검색 실행 시작 (HiddenFrame)');
+            
+            // HiddenFrame: 숨겨진 상태에서는 검색하지 않음
+            if (!this.isVisible()) {
+                console.log('🏢 숨겨진 상태이므로 검색 중단');
+                return;
+            }
             
             const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
             if (!em_id) {
@@ -388,12 +435,13 @@
             this.navigateToPropUpdate(prop_id);
         },
         
-        // 사업장 수정 페이지로 이동
+        // 🆕 HiddenFrame: 사업장 수정 페이지로 이동
         navigateToPropUpdate: function(propId) {
+            // 전역 변수에 선택된 사업장 저장
             window.selected_prop_id = propId;
             
             if (typeof window.loadContent === 'function') {
-                window.loadContent('/fm/prop_update.html', `사업장수정(${propId})`);
+                window.loadContent('/fm/prop_update.html', `🏢 사업장수정(${propId})`);
                 window.showStatus && window.showStatus(`사업장 수정 페이지를 열었습니다.`);
             } else {
                 console.error('🏢 loadContent 함수를 찾을 수 없습니다.');
@@ -420,10 +468,10 @@
             this.searchProps();
         },
         
-        // 사업장 등록
+        // 🆕 HiddenFrame: 사업장 등록
         insertProp: function() {
             if (typeof window.loadContent === 'function') {
-                window.loadContent('/fm/prop_insert.html', '사업장등록');
+                window.loadContent('/fm/prop_insert.html', '🏢 사업장등록');
                 window.showStatus && window.showStatus('사업장 등록 페이지를 열었습니다.');
             } else {
                 console.error('🏢 loadContent 함수를 찾을 수 없습니다.');
@@ -436,15 +484,15 @@
         window.PropListModule.init();
     };
     
-    // 자동 초기화 (즉시 실행)
+    // 🆕 HiddenFrame: 자동 초기화 (즉시 실행)
     setTimeout(() => {
         if (!window.PropListModule.data.isInitialized) {
-            console.log('🏢 자동 초기화 시작');
+            console.log('🏢 자동 초기화 시작 (HiddenFrame)');
             window.PropListModule.init();
         }
     }, 500);
     
-    console.log('🏢 PropListModule 로드 완료');
+    console.log('🏢 PropListModule 로드 완료 (HiddenFrame)');
     
 })(); // 즉시 실행 함수 끝
 </script>

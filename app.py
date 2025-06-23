@@ -5,6 +5,10 @@ from controllers.base import base_bp
 from controllers.fm.em_list import em_list_bp
 from controllers.fm.prop_list import prop_list_bp
 from controllers.fm.prop_update import prop_update_bp
+from controllers.fm.bl_list import bl_list_bp
+from controllers.fm.bl_update import bl_update_bp
+from controllers.fm.blpds_update import blpds_update_bp 
+
 from config import get_config
 from db import test_connection, init_database
 import os
@@ -19,7 +23,7 @@ def create_app():
     
     # 설정 초기화
     config_class.init_app(app)
-    
+     
     # Blueprint 등록
     app.register_blueprint(login_bp, url_prefix='/login')
     app.register_blueprint(common_bp, url_prefix='/common')
@@ -27,7 +31,9 @@ def create_app():
     app.register_blueprint(em_list_bp, url_prefix='/fm')
     app.register_blueprint(prop_list_bp, url_prefix='/fm')
     app.register_blueprint(prop_update_bp, url_prefix='/fm')
-    
+    app.register_blueprint(bl_list_bp, url_prefix='/fm')
+    app.register_blueprint(bl_update_bp, url_prefix='/fm')
+    app.register_blueprint(blpds_update_bp, url_prefix='/fm')
     # 메인 라우트
     @app.route('/')
     def index():

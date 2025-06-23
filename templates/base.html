@@ -16,24 +16,35 @@
         window.userInfo = null;
         window.propList = [];
         
-        // 탭 관리 시스템
+        // 🆕 HiddenFrame 기반 탭 관리 시스템
         window.tabManager = {
             tabs: new Map(), // 탭 데이터 저장소
             activeTabId: null,
+            maxTabs: 15, // 메모리 관리를 위한 최대 탭 수
             
             // 탭 추가
             addTab: function(url, title) {
                 const tabId = this.generateTabId(url);
                 
                 if (!this.tabs.has(tabId)) {
+                    // 메모리 관리: 최대 탭 수 체크
+                    if (this.tabs.size >= this.maxTabs) {
+                        this.removeOldestTab();
+                    }
+                    
+                    // 새 탭 컨테이너 생성
+                    const tabContainer = this.createTabContainer(tabId);
+                    
                     this.tabs.set(tabId, {
                         id: tabId,
                         url: url,
                         title: title,
-                        content: null,
+                        container: tabContainer,
                         loaded: false,
+                        lastAccess: Date.now(),
                         formData: new Map() // 폼 데이터 저장
                     });
+                    
                     this.renderTabHeaders();
                 }
                 
@@ -41,9 +52,37 @@
                 return tabId;
             },
             
+            // 탭 컨테이너 생성
+            createTabContainer: function(tabId) {
+                const container = document.createElement('div');
+                container.id = `tab-container-${tabId}`;
+                container.className = 'tab-container';
+                container.style.cssText = `
+                    display: none;
+                    width: 100%;
+                    height: 100%;
+                    overflow: auto;
+                    padding: 20px;
+                `;
+                
+                const dynamicContent = document.getElementById('dynamic-content');
+                if (dynamicContent) {
+                    dynamicContent.appendChild(container);
+                }
+                
+                return container;
+            },
+            
             // 탭 제거
             removeTab: function(tabId) {
                 if (this.tabs.has(tabId)) {
+                    const tab = this.tabs.get(tabId);
+                    
+                    // DOM에서 컨테이너 제거
+                    if (tab.container && tab.container.parentNode) {
+                        tab.container.parentNode.removeChild(tab.container);
+                    }
+                    
                     this.tabs.delete(tabId);
                     
                     if (this.activeTabId === tabId) {
@@ -60,23 +99,53 @@
                 }
             },
             
-            // 탭 전환
+            // 가장 오래된 탭 제거 (LRU)
+            removeOldestTab: function() {
+                let oldestTab = null;
+                let oldestTime = Date.now();
+                
+                this.tabs.forEach((tab, tabId) => {
+                    if (tab.lastAccess < oldestTime && tabId !== this.activeTabId) {
+                        oldestTime = tab.lastAccess;
+                        oldestTab = tabId;
+                    }
+                });
+                
+                if (oldestTab) {
+                    console.log('🗑️ 메모리 관리: 오래된 탭 제거', oldestTab);
+                    this.removeTab(oldestTab);
+                }
+            },
+            
+            // 탭 전환 (핵심: hiddenframe 방식)
             switchToTab: function(tabId) {
                 if (!this.tabs.has(tabId)) return;
                 
-                // 현재 탭의 상태 저장
-                this.saveCurrentTabState();
+                // 이전 탭 숨기기
+                if (this.activeTabId && this.tabs.has(this.activeTabId)) {
+                    const prevTab = this.tabs.get(this.activeTabId);
+                    prevTab.container.style.display = 'none';
+                    
+                    // 이전 탭의 상태 저장
+                    this.saveTabState(this.activeTabId);
+                }
                 
                 this.activeTabId = tabId;
                 const tab = this.tabs.get(tabId);
+                tab.lastAccess = Date.now(); // 접근 시간 업데이트
                 
                 // 탭 헤더 업데이트
                 this.updateTabHeaders();
                 
-                if (tab.loaded && tab.content) {
-                    // 캐시된 내용 표시
-                    this.displayTabContent(tab.content);
-                    this.restoreTabState(tab);
+                if (tab.loaded && tab.container.innerHTML) {
+                    // 🎯 핵심: 이미 로드된 탭은 단순히 표시만
+                    tab.container.style.display = 'block';
+                    
+                    // 상태 복원
+                    setTimeout(() => {
+                        this.restoreTabState(tabId);
+                        this.notifyTabVisible(tab.container);
+                    }, 50);
                 } else {
                     // 새로 로드
                     this.loadTabContent(tab);
@@ -118,7 +187,7 @@
             
             // 탭 콘텐츠 로드
             loadTabContent: function(tab) {
-                this.showLoading();
+                this.showTabLoading(tab.container);
                 
                 fetch('/common/load_container', {
                     method: 'POST',
@@ -127,10 +196,17 @@
                 })
                 .then(response => response.text())
                 .then(html => {
-                    tab.content = html;
+                    // 🎯 핵심: 한 번만 innerHTML 설정
+                    tab.container.innerHTML = html;
                     tab.loaded = true;
-                    this.displayTabContent(html);
-                    this.hideLoading();
+                    tab.container.style.display = 'block';
+                    
+                    // 스크립트 실행
+                    setTimeout(() => {
+                        this.executeScriptsInContainer(tab.container);
+                        this.autoInitializePages(tab.container);
+                        this.notifyTabVisible(tab.container);
+                    }, 100);
                 })
                 .catch(error => {
                     console.error('탭 콘텐츠 로드 오류:', error);
@@ -141,30 +217,51 @@
                             <button class="btn btn-primary" onclick="window.tabManager.reloadTab('${tab.id}')">다시 시도</button>
                         </div>
                     `;
-                    this.displayTabContent(errorHtml);
-                    this.hideLoading();
+                    tab.container.innerHTML = errorHtml;
+                    tab.container.style.display = 'block';
                 });
             },
-           
-
             
-            // 탭 콘텐츠 표시
-            displayTabContent: function(html) {
-                const container = document.getElementById('dynamic-content');
-                if (container) {
-                    container.innerHTML = html;
-
-                    // 🔥 HTML 삽입 후 script 재실행
-                    setTimeout(() => {
-                        // <script>를 동적으로 실행
-                        executeScriptsInContainer(container);
-
-                        // ✅ 개선된 자동 초기화 시스템
-                        setTimeout(() => {
-                            this.autoInitializePages();
-                        }, 300);
-                    }, 200);
-                }
+            // 탭 로딩 표시
+            showTabLoading: function(container) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 50px;">
+                        <div class="spinner" style="margin: 0 auto 20px;"></div>
+                        <p>페이지를 불러오는 중...</p>
+                    </div>
+                `;
+                container.style.display = 'block';
+            },
+            
+            // 탭이 보일 때 페이지에 알림
+            notifyTabVisible: function(container) {
+                // 페이지별 초기화 함수 재호출 (hidden 상태에서 visible로 변경시)
+                const event = new CustomEvent('tabVisible', { 
+                    detail: { container: container }
+                });
+                container.dispatchEvent(event);
+                
+                // 전역 함수들도 호출
+                setTimeout(() => {
+                    if (typeof window.onTabVisible === 'function') {
+                        window.onTabVisible(container);
+                    }
+                }, 100);
+            },
+            
+            // 스크립트 실행
+            executeScriptsInContainer: function(container) {
+                const scripts = container.querySelectorAll('script');
+                scripts.forEach(script => {
+                    const newScript = document.createElement('script');
+                    if (script.src) {
+                        newScript.src = script.src;
+                        newScript.async = false;
+                    } else {
+                        newScript.textContent = script.textContent;
+                    }
+                    script.parentNode.replaceChild(newScript, script);
+                });
             },
 
             // 🆕 개선된 자동 초기화 시스템
@@ -176,7 +273,9 @@
                     'initEmployeePage',
                     'initPropListPage', 
                     'initPropInsertPage',
-                    'initPropUpdatePage'
+                    'initPropUpdatePage',
+                    'initBlListPage',
+                    'initBlUpdatePage'
                 ];
                 
                 initFunctions.forEach(funcName => {
@@ -194,7 +293,9 @@
                 const modules = [
                     'PropListModule',
                     'PropInsertModule', 
-                    'PropUpdateModule'
+                    'PropUpdateModule',
+                    'BlListModule',
+                    'BlUpdateModule'
                 ];
                 
                 modules.forEach(moduleName => {
@@ -208,17 +309,14 @@
                     }
                 });
             },
-
             
-            // 현재 탭 상태 저장
-            saveCurrentTabState: function() {
-                if (!this.activeTabId) return;
-                
-                const tab = this.tabs.get(this.activeTabId);
-                if (!tab) return;
+            // 탭 상태 저장 (폼 데이터, 스크롤 위치)
+            saveTabState: function(tabId) {
+                const tab = this.tabs.get(tabId);
+                if (!tab || !tab.container) return;
                 
                 // 폼 데이터 저장
-                const forms = document.querySelectorAll('#dynamic-content form');
+                const forms = tab.container.querySelectorAll('form');
                 forms.forEach((form, index) => {
                     const formData = new FormData(form);
                     const formObj = {};
@@ -229,17 +327,19 @@
                 });
                 
                 // 스크롤 위치 저장
-                const contentArea = document.getElementById('dynamic-content');
-                if (contentArea) {
-                    tab.scrollTop = contentArea.scrollTop;
-                }
+                tab.scrollTop = tab.container.scrollTop;
+                
+                console.log('💾 탭 상태 저장:', tabId);
             },
             
             // 탭 상태 복원
-            restoreTabState: function(tab) {
+            restoreTabState: function(tabId) {
+                const tab = this.tabs.get(tabId);
+                if (!tab || !tab.container) return;
+                
                 // 폼 데이터 복원
                 setTimeout(() => {
-                    const forms = document.querySelectorAll('#dynamic-content form');
+                    const forms = tab.container.querySelectorAll('form');
                     forms.forEach((form, index) => {
                         const formData = tab.formData.get(`form_${index}`);
                         if (formData) {
@@ -253,10 +353,11 @@
                     });
                     
                     // 스크롤 위치 복원
-                    const contentArea = document.getElementById('dynamic-content');
-                    if (contentArea && tab.scrollTop) {
-                        contentArea.scrollTop = tab.scrollTop;
+                    if (tab.scrollTop) {
+                        tab.container.scrollTop = tab.scrollTop;
                     }
+                    
+                    console.log('🔄 탭 상태 복원:', tabId);
                 }, 100);
             },
             
@@ -265,7 +366,7 @@
                 const tab = this.tabs.get(tabId);
                 if (tab) {
                     tab.loaded = false;
-                    tab.content = null;
+                    tab.container.innerHTML = '';
                     tab.formData.clear();
                     if (this.activeTabId === tabId) {
                         this.loadTabContent(tab);
@@ -276,6 +377,13 @@
             // 대시보드 표시
             showDashboard: function() {
                 this.activeTabId = null;
+                
+                // 모든 탭 컨테이너 숨기기
+                this.tabs.forEach(tab => {
+                    tab.container.style.display = 'none';
+                });
+                
+                // 대시보드 HTML 표시
                 const dashboardHtml = `
                     <h2>📊 대시보드</h2>
                     
@@ -285,16 +393,16 @@
                             <p style="font-size: 24px; font-weight: bold; margin: 0; color: #155724;">연동 준비</p>
                         </div>
                         <div style="background: #e3f2fd; padding: 20px; border-radius: 8px; border-left: 4px solid #007bff;">
-                            <h4 style="margin: 0 0 10px 0; color: #004085;">직원 관리</h4>
-                            <p style="font-size: 24px; font-weight: bold; margin: 0; color: #004085;">시스템</p>
+                            <h4 style="margin: 0 0 10px 0; color: #004085;">HiddenFrame</h4>
+                            <p style="font-size: 24px; font-weight: bold; margin: 0; color: #004085;">탭 시스템</p>
                         </div>
                         <div style="background: #fff3cd; padding: 20px; border-radius: 8px; border-left: 4px solid #ffc107;">
-                            <h4 style="margin: 0 0 10px 0; color: #856404;">SPA 모드</h4>
+                            <h4 style="margin: 0 0 10px 0; color: #856404;">상태 보존</h4>
                             <p style="font-size: 24px; font-weight: bold; margin: 0; color: #856404;">활성화</p>
                         </div>
                         <div style="background: #f8d7da; padding: 20px; border-radius: 8px; border-left: 4px solid #dc3545;">
-                            <h4 style="margin: 0 0 10px 0; color: #721c24;">탭 메모리</h4>
-                            <p style="font-size: 24px; font-weight: bold; margin: 0; color: #721c24;">지원</p>
+                            <h4 style="margin: 0 0 10px 0; color: #721c24;">메모리 관리</h4>
+                            <p style="font-size: 24px; font-weight: bold; margin: 0; color: #721c24;">자동화</p>
                         </div>
                     </div>
                     
@@ -304,29 +412,51 @@
                             <button style="padding: 15px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; text-align: left;" onclick="window.loadContent('/fm/em_list.html', '📝 직원정보')">
                                 📝 직원 정보 관리
                             </button>
+                            <button style="padding: 15px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; text-align: left;" onclick="window.loadContent('/fm/prop_list.html', '🏢 사업장정보')">
+                                🏢 사업장 정보 관리
+                            </button>
+                        </div>
+                        
+                        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+                            <h4 style="margin: 0 0 10px 0;">🔧 HiddenFrame 탭 시스템 특징</h4>
+                            <ul style="margin: 0; padding-left: 20px; color: #495057;">
+                                <li>✅ 작성 중인 폼 데이터 완전 보존</li>
+                                <li>✅ 스크롤 위치 자동 복원</li>
+                                <li>✅ 빠른 탭 전환 (DOM 재생성 없음)</li>
+                                <li>✅ 메모리 자동 관리 (최대 ${this.maxTabs}개 탭)</li>
+                                <li>✅ 사용자 경험 대폭 개선</li>
+                            </ul>
                         </div>
                     </div>
                 `;
-                this.displayTabContent(dashboardHtml);
+                
+                // 임시 대시보드 컨테이너 생성
+                const dashboardContainer = document.createElement('div');
+                dashboardContainer.innerHTML = dashboardHtml;
+                dashboardContainer.style.cssText = 'display: block; width: 100%; height: 100%; padding: 20px; overflow: auto;';
+                
+                const dynamicContent = document.getElementById('dynamic-content');
+                if (dynamicContent) {
+                    // 기존 대시보드 제거
+                    const existingDashboard = dynamicContent.querySelector('.dashboard-container');
+                    if (existingDashboard) {
+                        existingDashboard.remove();
+                    }
+                    
+                    dashboardContainer.className = 'dashboard-container';
+                    dynamicContent.appendChild(dashboardContainer);
+                }
+                
                 this.updateTabHeaders();
             },
             
-            // 로딩 표시
-            showLoading: function() {
-                const container = document.getElementById('dynamic-content');
-                if (container) {
-                    container.innerHTML = `
-                        <div style="text-align: center; padding: 50px;">
-                            <div class="spinner" style="margin: 0 auto 20px;"></div>
-                            <p>페이지를 불러오는 중...</p>
-                        </div>
-                    `;
+            // 현재 활성 탭이 보이는지 확인
+            isCurrentTabVisible: function() {
+                if (!this.activeTabId || !this.tabs.has(this.activeTabId)) {
+                    return false;
                 }
-            },
-            
-            // 로딩 숨김
-            hideLoading: function() {
-                // 로딩은 콘텐츠로 대체되므로 별도 처리 불필요
+                const tab = this.tabs.get(this.activeTabId);
+                return tab.container && tab.container.style.display === 'block';
             }
         };
         
@@ -443,23 +573,22 @@
                 // 메뉴 데이터 새로 로드
                 window.loadMenuData();
                 
-                // 현재 활성화된 탭이 직원정보라면 새로고침
-                if (window.tabManager.activeTabId) {
+                // 🆕 HiddenFrame: 현재 활성 탭에 사업소 변경 알림
+                if (window.tabManager.activeTabId && window.tabManager.isCurrentTabVisible()) {
                     const activeTab = window.tabManager.tabs.get(window.tabManager.activeTabId);
-                    if (activeTab && activeTab.url.includes('em_list')) {
-                        console.log('📝 직원정보 탭 새로고침 실행');
-                        
-                        // 탭 데이터 초기화
-                        activeTab.loaded = false;
-                        activeTab.content = null;
-                        activeTab.formData.clear();
-                        
-                        // 탭 다시 로드
-                        window.tabManager.loadTabContent(activeTab);
+                    if (activeTab && activeTab.container) {
+                        // 탭 컨테이너에 이벤트 발송
+                        const event = new CustomEvent('propChanged', { 
+                            detail: { 
+                                propId: selectedPropId,
+                                propName: selectedPropName 
+                            }
+                        });
+                        activeTab.container.dispatchEvent(event);
                     }
                 }
                 
-                // 전역적으로 사업소 변경 알림 (다른 페이지에서도 사용 가능)
+                // 전역적으로 사업소 변경 알림
                 if (typeof window.onEmployeePagePropChange === 'function') {
                     window.onEmployeePagePropChange(selectedPropId);
                 }
@@ -593,7 +722,7 @@
             window.showStatus(`${moduleTitle} 모듈이 선택되었습니다.`);
         };
         
-        // 하위 메뉴 클릭 함수 (SPA 전용)
+        // 하위 메뉴 클릭 함수 (HiddenFrame 전용)
         window.clickMenu = function(element) {
             const url = element.dataset.menuUrl;
             const title = element.textContent.trim();
@@ -681,9 +810,9 @@
             }
         };
         
-        // 콘텐츠 로드 함수 (SPA 전용)
+        // 콘텐츠 로드 함수 (HiddenFrame 전용)
         window.loadContent = function(url, title) {
-            console.log('🔗 loadContent 호출됨:', { url, title });
+            console.log('🔗 loadContent 호출됨 (HiddenFrame):', { url, title });
             
             if (!url) {
                 console.error('🔗 URL이 없습니다');
@@ -691,18 +820,12 @@
                 return;
             }
             
-            console.log('🔗 tabManager 존재 확인:', typeof window.tabManager);
-            console.log('🔗 tabManager.addTab 존재 확인:', typeof window.tabManager.addTab);
-            
             try {
-                console.log('🔗 탭 추가 시도 시작');
-                // 탭 추가 및 전환
+                // 🎯 HiddenFrame: 탭 추가 및 전환
                 window.tabManager.addTab(url, title);
-                console.log('🔗 탭 추가 완료');
                 window.showStatus(`${title} 탭을 열었습니다.`);
             } catch (error) {
                 console.error('🔗 탭 추가 중 오류:', error);
-                console.error('🔗 오류 스택:', error.stack);
             }
         };
         
@@ -785,7 +908,7 @@
         
         // 초기화 함수
         window.initialize = function() {
-            console.log('=== SPA 시스템 초기화 시작 ===');
+            console.log('=== 시스템 초기화 시작 ===');
             
             // 시계 시작
             window.updateClock();
@@ -813,16 +936,16 @@
                         
                         // 직원정보 탭을 첫 페이지로 자동 오픈
                         setTimeout(() => {
-                            console.log('📝 직원정보 탭을 첫 페이지로 오픈');
+                            console.log('📝 직원정보 탭을 첫 페이지로 오픈 ');
                             window.loadContent('/fm/em_list.html', '📝 직원정보');
                         }, 800);
                         
-                        console.log('=== SPA 시스템 초기화 완료 ===');
-                        window.showStatus('SPA 모드로 시스템이 준비되었습니다.');
+                        console.log('=== HiddenFrame SPA 시스템 초기화 완료 ===');
+                        window.showStatus('시스템이 준비되었습니다.');
                     }
                 })
                 .catch(error => {
-                    console.error('=== SPA 초기화 오류 ===', error);
+                    console.error('=== HiddenFrame SPA 초기화 오류 ===', error);
                     window.showStatus('시스템 초기화 중 오류가 발생했습니다.');
                     
                     // 오류 발생 시에도 직원정보 탭 열기 시도
@@ -831,19 +954,6 @@
                     }, 1000);
                 });
         };
-        function executeScriptsInContainer(container) {
-            const scripts = container.querySelectorAll('script');
-            scripts.forEach(script => {
-                const newScript = document.createElement('script');
-                if (script.src) {
-                    newScript.src = script.src;
-                    newScript.async = false;
-                } else {
-                    newScript.textContent = script.textContent;
-                }
-                script.parentNode.replaceChild(newScript, script);
-            });
-        }
         
     </script>
 
@@ -919,8 +1029,22 @@
         
         #dynamic-content {
             flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* 🆕 HiddenFrame 탭 컨테이너 스타일 */
+        .tab-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
             overflow: auto;
             padding: 20px;
+            background: white;
         }
     </style>
 </head>
@@ -984,6 +1108,7 @@
             </div>
             
             <div class="content-area">
+                <!-- 🆕 HiddenFrame: 모든 탭 컨테이너를 포함하는 영역 -->
                 <div id="dynamic-content">
                     {% block content %}
                     <!-- 초기화 중 메시지 -->

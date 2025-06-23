@@ -1,0 +1,1436 @@
+<!-- SPA 탭용 건물수정 페이지 -->
+<link rel="stylesheet" href="/static/css/common.css">
+<style>
+    /* bl_update 스타일 - 다른 페이지와 일관성 맞춤 */
+    #bl_update_outer {
+        padding: 20px;
+        padding-bottom: 0;
+        overflow-y: auto;
+        background-color: #f8f9fa;
+        font-size: 12px;
+    }
+
+    #bl_update_outer .button-area {
+        text-align: right;
+        margin-bottom: 15px;
+        padding: 15px;
+        background-color: white;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    #bl_update_outer .button-area button {
+        margin-left: 5px;
+        padding: 6px 12px;
+        background: #fff;
+        color: #333;
+        border: 1px solid #ced4da;
+        font-size: 12px;
+        font-family: inherit;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.15s ease-in-out;
+    }
+
+    #bl_update_outer .button-area button:hover {
+        background-color: #e9ecef;
+        border-color: #adb5bd;
+    }
+
+    #bl_update_outer .button-area button.btn-primary {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+
+    #bl_update_outer .button-area button.btn-primary:hover {
+        background: #0056b3;
+        border-color: #004085;
+    }
+
+    #bl_update_outer .selection-area {
+        margin-bottom: 15px;
+    }
+
+    #bl_update_outer .selection-area .table {
+        margin-bottom: 0;
+        background-color: white;
+        border-collapse: collapse;
+        font-size: 12px;
+    }
+
+    #bl_update_outer .selection-area .table td {
+        padding: 8px;
+        border: 1px solid #dee2e6;
+        vertical-align: middle;
+    }
+
+    #bl_update_outer .selection-area .table-header {
+        background-color: #f8f9fa;
+        font-weight: bold;
+        text-align: center;
+        width: 10%;
+    }
+
+    #bl_update_outer .tab-area {
+        margin-bottom: 15px;
+    }
+
+    #bl_update_outer .tab-area .nav-tabs {
+        border-bottom: 1px solid #dee2e6;
+        background-color: white;
+        display: flex;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    #bl_update_outer .tab-area .nav-link {
+        font-size: 13px;
+        font-weight: 500;
+        color: #666;
+        padding: 10px 16px;
+        cursor: pointer;
+        border: none;
+        border-bottom: 2px solid transparent;
+        background-color: #f8f9fa;
+        margin-right: 2px;
+        border-radius: 4px 4px 0 0;
+        text-decoration: none;
+        display: block;
+        transition: all 0.15s ease-in-out;
+    }
+
+    #bl_update_outer .tab-area .nav-link:hover {
+        background-color: #e9ecef;
+        border-color: transparent;
+    }
+
+    #bl_update_outer .tab-area .nav-link.active {
+        color: #495057;
+        background-color: white;
+        border-color: #007bff;
+        font-weight: bold;
+    }
+
+    #bl_update_outer .content-area {
+        background-color: white;
+        border-radius: 5px;
+        border: 1px solid #dee2e6;
+        min-height: 500px;
+    }
+
+    #bl_update_outer .tab-content {
+        display: none;
+        padding: 20px;
+    }
+
+    #bl_update_outer .tab-content.active {
+        display: block;
+    }
+
+    #bl_update_outer .form-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+        font-size: 12px;
+    }
+
+    #bl_update_outer .form-table td {
+        padding: 8px;
+        border: 1px solid #dee2e6;
+        vertical-align: middle;
+    }
+
+    #bl_update_outer .form-table .label {
+        background-color: #f8f9fa;
+        font-weight: bold;
+        text-align: center;
+        width: 12%;
+        min-width: 80px;
+    }
+
+    #bl_update_outer .form-table input,
+    #bl_update_outer .form-table select,
+    #bl_update_outer .form-table textarea {
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        padding: 4px 6px;
+        font-size: 12px;
+        width: 100%;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+
+    #bl_update_outer .form-table input:focus,
+    #bl_update_outer .form-table select:focus,
+    #bl_update_outer .form-table textarea:focus {
+        border-color: #007bff;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    #bl_update_outer .form-table .text-right {
+        text-align: right;
+    }
+
+    #bl_update_outer .form-table input[readonly] {
+        background-color: #e9ecef;
+    }
+
+    #bl_update_outer .form-table label {
+        margin-right: 8px;
+        margin-bottom: 0;
+        font-weight: normal;
+        font-size: 12px;
+    }
+
+    #bl_update_outer .form-table input[type="radio"] {
+        width: auto;
+        margin-right: 4px;
+    }
+
+    /* 이력/사진 관련 스타일 */
+    #bl_update_outer .search-area {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+
+    #bl_update_outer .search-area select,
+    #bl_update_outer .search-area input {
+        padding: 4px 8px;
+        border: 1px solid #ced4da;
+        font-size: 12px;
+        border-radius: 4px;
+    }
+
+    #bl_update_outer .search-area select {
+        width: 120px;
+    }
+
+    #bl_update_outer .search-area input[type="date"] {
+        width: 120px;
+    }
+
+    #bl_update_outer .search-area input[type="text"] {
+        width: 150px;
+    }
+
+    #bl_update_outer .search-area button {
+        padding: 4px 12px;
+        background: #fff;
+        color: #333;
+        border: 1px solid #ced4da;
+        font-size: 12px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    #bl_update_outer .search-area button:hover {
+        background: #e9ecef;
+    }
+
+    #bl_update_outer .data-table {
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        overflow: hidden;
+        margin-bottom: 15px;
+    }
+
+    #bl_update_outer .data-table .table {
+        margin-bottom: 0;
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 12px;
+    }
+
+    #bl_update_outer .data-table .table th {
+        background-color: #f8f9fa;
+        font-weight: bold;
+        text-align: center;
+        vertical-align: middle;
+        border: 1px solid #dee2e6;
+        padding: 8px;
+    }
+
+    #bl_update_outer .data-table .table td {
+        vertical-align: middle;
+        border: 1px solid #dee2e6;
+        padding: 8px;
+        cursor: pointer;
+    }
+
+    #bl_update_outer .data-table .table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    #bl_update_outer .data-table .table tbody tr.table-active {
+        background-color: #e3f2fd;
+        border-left: 3px solid #2196f3;
+    }
+
+    #bl_update_outer .photo-viewer {
+        position: fixed;
+        right: 20px;
+        top: 120px;
+        width: 300px;
+        height: 400px;
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        z-index: 1000;
+    }
+
+    #bl_update_outer .photo-title {
+        font-weight: bold;
+        margin-bottom: 10px;
+        text-align: center;
+        color: #495057;
+        font-size: 13px;
+    }
+
+    #bl_update_outer .photo-display {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 10px;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    #bl_update_outer .photo-display img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+
+    #bl_update_outer .photo-controls {
+        text-align: center;
+    }
+
+    #bl_update_outer .photo-controls button {
+        margin: 0 4px;
+        padding: 4px 8px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 11px;
+    }
+
+    #bl_update_outer .photo-controls button:hover {
+        background-color: #0056b3;
+    }
+
+    .main-photo-indicator {
+        color: #dc3545;
+        font-weight: bold;
+        font-size: 11px;
+    }
+
+    /* 에러/성공 메시지 */
+    .error-message {
+        background-color: #f8d7da;
+        color: #721c24;
+        padding: 10px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        border: 1px solid #f5c6cb;
+        font-size: 12px;
+    }
+
+    .success-message {
+        background-color: #d4edda;
+        color: #155724;
+        padding: 10px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        border: 1px solid #c3e6cb;
+        font-size: 12px;
+    }
+
+    /* 반응형 */
+    @media (max-width: 1200px) {
+        #bl_update_outer .photo-viewer {
+            position: relative;
+            right: auto;
+            top: auto;
+            width: 100%;
+            height: 300px;
+            margin-top: 15px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        #bl_update_outer {
+            padding: 10px;
+        }
+        
+        #bl_update_outer .search-area {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        #bl_update_outer .search-area select,
+        #bl_update_outer .search-area input {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+    }
+</style>
+
+<div id="bl_update_outer">
+    <!-- 상단 버튼 영역 -->
+    <div class="button-area">
+        <button type="button" id="btn_delete_photo" onclick="BlUpdateModule.deleteMainPhoto()">메인사진삭제</button>
+        <button type="button" id="btn_print" onclick="BlUpdateModule.printBl()">인쇄</button>
+        <button type="button" id="btn_save" class="btn-primary" onclick="BlUpdateModule.saveBlData()">저장</button>
+        <button type="button" id="btn_excel" onclick="BlUpdateModule.exportExcel()">엑셀저장</button>
+        <button type="button" id="btn_list" onclick="BlUpdateModule.goToBlList()">목록보기</button>
+    </div>
+
+    <!-- 사업장/건물 선택 영역 -->
+    <div class="selection-area">
+        <table class="table">
+            <tr>
+                <td class="table-header">사업장</td>
+                <td id="prop_info">로딩 중...</td>
+                <td class="table-header">건물</td>
+                <td>
+                    <select id="bl_select" onchange="BlUpdateModule.changeBlSelection()">
+                        <option value="">--건물선택--</option>
+                    </select>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- 탭 영역 -->
+    <div class="tab-area">
+        <ul class="nav nav-tabs">
+            <li class="nav-item">
+                <a class="nav-link active" href="#" data-tab="1" onclick="BlUpdateModule.showTab(1, this)">건물개요</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" data-tab="2" onclick="BlUpdateModule.showTab(2, this)">기타정보</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" data-tab="3" onclick="BlUpdateModule.showTab(3, this)">건물이력</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" data-tab="4" onclick="BlUpdateModule.showTab(4, this)">사진</a>
+            </li>
+        </ul>
+    </div>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <div class="content-area">
+        <!-- 탭 1: 건물개요 -->
+        <div id="tab1_content" class="tab-content active">
+            <table class="form-table">
+                <tr>
+                    <td class="label">건물명</td>
+                    <td><input type="text" id="name"></td>
+                    <td class="label">소유주</td>
+                    <td><input type="text" id="landlord"></td>
+                </tr>
+                <tr>
+                    <td class="label">설계자</td>
+                    <td><input type="text" id="design"></td>
+                    <td class="label">시공사</td>
+                    <td><input type="text" id="builder"></td>
+                </tr>
+                <tr>
+                    <td class="label">소재지</td>
+                    <td colspan="3"><input type="text" id="address1"></td>
+                </tr>
+                <tr>
+                    <td class="label">연면적(㎡)</td>
+                    <td>
+                        <input type="text" id="area_total" class="text-right" onkeyup="BlUpdateModule.calculatePyeong()"> ㎡
+                        <input type="text" id="area_total_pyeong" class="text-right" readonly> 평
+                    </td>
+                    <td class="label">지목</td>
+                    <td><input type="text" id="class_land"></td>
+                </tr>
+                <tr>
+                    <td class="label">지역</td>
+                    <td><input type="text" id="district"></td>
+                    <td class="label">지구</td>
+                    <td><input type="text" id="section"></td>
+                </tr>
+                <tr>
+                    <td class="label">건축면적</td>
+                    <td><input type="text" id="area_bl" class="text-right"> ㎡</td>
+                    <td class="label">대지면적</td>
+                    <td><input type="text" id="parcel" class="text-right"> ㎡</td>
+                </tr>
+                <tr>
+                    <td class="label">건폐율</td>
+                    <td><input type="text" id="bl_to_land_ratio" class="text-right"> %</td>
+                    <td class="label">전용율</td>
+                    <td><input type="text" id="exclusive_ratio" class="text-right" readonly> %</td>
+                </tr>
+                <tr>
+                    <td class="label">용적율</td>
+                    <td><input type="text" id="fl_space_index" class="text-right"> %</td>
+                    <td class="label">전용면적</td>
+                    <td><input type="text" id="area_usable" class="text-right"> ㎡</td>
+                </tr>
+                <tr>
+                    <td class="label">건축구조</td>
+                    <td><input type="text" id="construction_type"></td>
+                    <td class="label">지붕형태</td>
+                    <td><input type="text" id="roof_type"></td>
+                </tr>
+                <tr>
+                    <td class="label">층수<br>지상/지하</td>
+                    <td>
+                        <input type="text" id="count_fl" class="text-right" style="width:45%; display:inline-block"> 층 /
+                        <input type="text" id="count_bf" class="text-right" style="width:45%; display:inline-block"> 층
+                    </td>
+                    <td class="label">최고높이<br>지상/지하</td>
+                    <td>
+                        <input type="text" id="bl_height" class="text-right" style="width:45%; display:inline-block"> m /
+                        <input type="text" id="bl_depth" class="text-right" style="width:45%; display:inline-block"> m
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">주용도</td>
+                    <td><input type="text" id="use1"></td>
+                    <td class="label">준공일</td>
+                    <td><input type="date" id="date_bl"></td>
+                </tr>
+                <tr>
+                    <td class="label">주차설비</td>
+                    <td colspan="3"><input type="text" id="parking_type"></td>
+                </tr>
+                <tr>
+                    <td class="label">승강설비</td>
+                    <td colspan="3"><input type="text" id="elev_type"></td>
+                </tr>
+                <tr>
+                    <td class="label">수전설비</td>
+                    <td colspan="3"><input type="text" id="elec_type"></td>
+                </tr>
+                <tr>
+                    <td class="label">발전설비</td>
+                    <td colspan="3"><input type="text" id="generator_type"></td>
+                </tr>
+                <tr>
+                    <td class="label">난방설비</td>
+                    <td colspan="3"><input type="text" id="heating_type"></td>
+                </tr>
+                <tr>
+                    <td class="label">냉방설비</td>
+                    <td colspan="3"><input type="text" id="cooling_type"></td>
+                </tr>
+                <tr>
+                    <td class="label">담당자</td>
+                    <td><input type="text" id="contact_name"></td>
+                    <td class="label">대표번호</td>
+                    <td><input type="text" id="contact_phone"></td>
+                </tr>
+                <tr>
+                    <td class="label">FAX</td>
+                    <td><input type="text" id="contact_fax"></td>
+                    <td class="label">우편번호</td>
+                    <td><input type="text" id="zip"></td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 탭 2: 기타정보 -->
+        <div id="tab2_content" class="tab-content">
+            <table class="form-table">
+                <tr>
+                    <td class="label">등기여부</td>
+                    <td>
+                        <label><input type="radio" name="regist" value="1"> 유</label>
+                        <label><input type="radio" name="regist" value="0"> 무</label>
+                    </td>
+                    <td class="label">건물취득일</td>
+                    <td><input type="date" id="date_buy"></td>
+                </tr>
+                <tr>
+                    <td class="label">대지취득일</td>
+                    <td><input type="date" id="date_buy_land"></td>
+                    <td class="label">매각일자</td>
+                    <td><input type="date" id="date_sailed"></td>
+                </tr>
+                <tr>
+                    <td class="label">관리개시일</td>
+                    <td><input type="date" id="date_manage_start"></td>
+                    <td class="label">공시지가</td>
+                    <td><input type="text" id="price_pa_land" class="text-right"> 원</td>
+                </tr>
+                <tr>
+                    <td class="label">지상층면적</td>
+                    <td><input type="text" id="area_fl" class="text-right"> ㎡</td>
+                    <td class="label">지하층면적</td>
+                    <td><input type="text" id="area_bf" class="text-right"> ㎡</td>
+                </tr>
+                <tr>
+                    <td class="label">임대가능면적</td>
+                    <td><input type="text" id="area_rentable" class="text-right"> ㎡</td>
+                    <td class="label">조경면적</td>
+                    <td><input type="text" id="area_garden" class="text-right"> ㎡</td>
+                </tr>
+                <tr>
+                    <td class="label">장부가</td>
+                    <td><input type="text" id="price_book_value" class="text-right"> 원</td>
+                    <td class="label">임대가 환산율</td>
+                    <td><input type="text" id="base_rate" class="text-right"> %</td>
+                </tr>
+                <tr>
+                    <td class="label">4층 사용</td>
+                    <td>
+                        <label><input type="radio" name="use_fl_4" value="1"> 유</label>
+                        <label><input type="radio" name="use_fl_4" value="0"> 무</label>
+                    </td>
+                    <td class="label">13층사용</td>
+                    <td>
+                        <label><input type="radio" name="use_fl_13" value="1"> 유</label>
+                        <label><input type="radio" name="use_fl_13" value="0"> 무</label>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">전면도로폭</td>
+                    <td><input type="text" id="width_front_road" class="text-right"> m</td>
+                    <td class="label">후면도로폭</td>
+                    <td><input type="text" id="width_back_road" class="text-right"> m</td>
+                </tr>
+                <tr>
+                    <td class="label">측면도로폭</td>
+                    <td><input type="text" id="width_side_road" class="text-right"> m</td>
+                    <td class="label">옥내주차대수</td>
+                    <td><input type="text" id="parking_unit_inner" class="text-right"> 대</td>
+                </tr>
+                <tr>
+                    <td class="label">옥탑유무</td>
+                    <td>
+                        <label><input type="radio" name="ph" value="1"> 유</label>
+                        <label><input type="radio" name="ph" value="0"> 무</label>
+                    </td>
+                    <td class="label">옥외주차대수</td>
+                    <td><input type="text" id="parking_unit_outdoor" class="text-right"> 대</td>
+                </tr>
+                <tr>
+                    <td class="label">E/L대수</td>
+                    <td><input type="text" id="el_unit" class="text-right"> 대</td>
+                    <td class="label">E/S대수</td>
+                    <td><input type="text" id="es_unit" class="text-right"> 대</td>
+                </tr>
+                <tr>
+                    <td class="label">비고</td>
+                    <td colspan="3"><textarea id="comments" rows="3"></textarea></td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- 탭 3: 건물이력 -->
+        <div id="tab3_content" class="tab-content">
+            <div class="search-area">
+                <select id="history_type" onchange="BlUpdateModule.loadHistoryData()">
+                    <option value="2">이력관리</option>
+                    <option value="3">파일관리</option>
+                </select>
+                <input type="date" id="history_date_start" onchange="BlUpdateModule.loadHistoryData()">
+                ~
+                <input type="date" id="history_date_end" onchange="BlUpdateModule.loadHistoryData()">
+                <input type="text" id="history_search" placeholder="등록자,제목,내용" onkeypress="if(event.keyCode==13) BlUpdateModule.loadHistoryData()">
+                <button type="button" id="btn_history_search" onclick="BlUpdateModule.loadHistoryData()">조회</button>
+                <button type="button" id="btn_history_register" onclick="BlUpdateModule.registerHistory()">등록</button>
+            </div>
+            
+            <div class="data-table">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th width="55%">제목</th>
+                            <th width="15%">등록자</th>
+                            <th width="15%">등록일자</th>
+                            <th width="15%">파일</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history_table_body">
+                        <tr><td colspan="4" class="text-center">이력 데이터를 불러오는 중...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 탭 4: 사진 -->
+        <div id="tab4_content" class="tab-content">
+            <div class="search-area">
+                <input type="date" id="photo_date_start" onchange="BlUpdateModule.loadPhotoData()">
+                ~
+                <input type="date" id="photo_date_end" onchange="BlUpdateModule.loadPhotoData()">
+                <input type="text" id="photo_search" placeholder="등록자,제목,내용" onkeypress="if(event.keyCode==13) BlUpdateModule.loadPhotoData()">
+                <button type="button" id="btn_photo_search" onclick="BlUpdateModule.loadPhotoData()">조회</button>
+                <button type="button" id="btn_photo_register" onclick="BlUpdateModule.registerPhoto()">등록</button>
+            </div>
+            
+            <div class="data-table">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th width="55%">제목</th>
+                            <th width="15%">등록자</th>
+                            <th width="15%">등록일자</th>
+                            <th width="15%">파일</th>
+                        </tr>
+                    </thead>
+                    <tbody id="photo_table_body">
+                        <tr><td colspan="4" class="text-center">사진 데이터를 불러오는 중...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="photo-viewer">
+                <div class="photo-title" id="photo_title">사진을 선택하세요</div>
+                <div class="photo-display">
+                    <img id="photo_image" src="/static/images/common/no_image.png" alt="사진">
+                </div>
+                <div class="photo-controls">
+                    <button type="button" id="btn_prev_photo" onclick="BlUpdateModule.prevPhoto()">◀◀◀</button>
+                    <button type="button" id="btn_next_photo" onclick="BlUpdateModule.nextPhoto()">▶▶▶</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 히든 필드들 -->
+    <input type="hidden" id="current_bl_id" value="">
+    <input type="hidden" id="current_prop_id" value="">
+    <input type="hidden" id="current_tab" value="1">
+</div>
+
+<script>
+// 🛡️ 완전한 스코프 분리 - 변수 충돌 방지
+(function() {
+    'use strict';
+    
+    console.log('🏢 bl_update.html 스크립트 시작!');
+    
+    // 네임스페이스 생성 - 중복 방지
+    if (typeof window.BlUpdateModule !== 'undefined') {
+        console.log('🏢 기존 모듈 재사용');
+        return; // 이미 로드됨
+    }
+    
+    // 모듈 생성
+    window.BlUpdateModule = {
+        // 데이터 저장소
+        data: {
+            currentBlId: null,
+            currentPropId: null,
+            currentTab: 1,
+            blList: [],
+            historyData: [],
+            photoData: [],
+            selectedPhotoIndex: 0,
+            isInitialized: false,
+            hasPermission: false
+        },
+        
+        // 초기화
+        init: function() {
+            console.log('🏢 건물수정 페이지 초기화 시작');
+            
+            if (this.data.isInitialized) {
+                console.log('🏢 이미 초기화됨');
+                return;
+            }
+            
+            const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+            const prop_id = window.currentPropId;
+            const bl_id = window.selected_bl_id;
+            
+            console.log('🏢 받은 데이터:', { em_id, prop_id, bl_id });
+            
+            if (!em_id) {
+                console.error('🏢 em_id가 없습니다.');
+                this.showError('사용자 정보를 불러올 수 없습니다.');
+                return;
+            }
+            
+            if (!prop_id) {
+                console.error('🏢 prop_id가 없습니다.');
+                this.showError('사업소를 선택해주세요.');
+                return;
+            }
+            
+            this.data.currentPropId = prop_id;
+            this.data.isInitialized = true;
+            
+            // 사업소 정보 표시
+            this.displayPropInfo();
+            
+            // 건물 목록 로드
+            this.loadBlSelectOptions();
+            
+            // bl_id가 지정된 경우 해당 건물 로드
+            if (bl_id) {
+                setTimeout(() => {
+                    this.loadBlData(bl_id);
+                }, 500);
+            }
+        },
+        
+        // 사업소 정보 표시
+        displayPropInfo: function() {
+            const prop_id = this.data.currentPropId;
+            if (prop_id && window.propList) {
+                const prop = window.propList.find(p => p.prop_id === prop_id);
+                if (prop) {
+                    document.getElementById('prop_info').textContent = `${prop.prop_name} (${prop.prop_id})`;
+                }
+            }
+        },
+        
+        // 건물 선택 옵션 로드
+        loadBlSelectOptions: function() {
+            const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+            const prop_id = this.data.currentPropId;
+            
+            if (!em_id || !prop_id) return;
+            
+            fetch('/common/get_bl_list', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ em_id: em_id, prop_id: prop_id })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const select = document.getElementById('bl_select');
+                select.innerHTML = '<option value="">--건물선택--</option>';
+                
+                if (data.success && data.data) {
+                    this.data.blList = data.data;
+                    data.data.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.bl_id;
+                        option.textContent = item.bl_name;
+                        select.appendChild(option);
+                    });
+                    console.log('🏢 건물 선택 옵션 로드 완료:', data.data.length, '개');
+                    
+                    // selected_bl_id가 있으면 선택
+                    if (window.selected_bl_id) {
+                        select.value = window.selected_bl_id;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('🏢 건물 선택 옵션 로드 오류:', error);
+            });
+        },
+        
+        // 건물 선택 변경
+        changeBlSelection: function() {
+            const select = document.getElementById('bl_select');
+            const bl_id = select.value;
+            
+            if (bl_id) {
+                this.loadBlData(bl_id);
+            } else {
+                this.clearForm();
+            }
+        },
+        
+        // 건물 데이터 로드
+        loadBlData: function(bl_id) {
+            console.log('🏢 건물 데이터 로드 시작:', bl_id);
+            
+            if (!bl_id) return;
+            
+            this.data.currentBlId = bl_id;
+            document.getElementById('current_bl_id').value = bl_id;
+            
+            const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+            
+            this.showLoading('건물 정보를 불러오는 중...');
+            
+            fetch('/fm/bl_update/get_bl_data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bl_id: bl_id, em_id: em_id })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('🏢 건물 데이터 응답:', data);
+                
+                if (data.success) {
+                    this.data.hasPermission = data.has_permission;
+                    this.populateForm(data.data);
+                    this.hideLoading();
+                    
+                    // 현재 탭에 따라 추가 데이터 로드
+                    if (this.data.currentTab === 3) {
+                        this.loadHistoryData();
+                    } else if (this.data.currentTab === 4) {
+                        this.loadPhotoData();
+                    }
+                    
+                    // 권한 체크
+                    this.updatePermissionUI();
+                } else {
+                    this.showError('건물 정보를 불러올 수 없습니다: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('🏢 건물 데이터 로드 오류:', error);
+                this.showError('건물 정보를 불러오는 중 오류가 발생했습니다.');
+            });
+        },
+        
+        // 폼에 데이터 채우기
+        populateForm: function(data) {
+            // 건물개요 데이터
+            const fields = [
+                'name', 'landlord', 'design', 'builder', 'address1', 'area_total', 'class_land',
+                'district', 'section', 'area_bl', 'parcel', 'bl_to_land_ratio', 'fl_space_index',
+                'area_usable', 'construction_type', 'roof_type', 'count_fl', 'count_bf',
+                'bl_height', 'bl_depth', 'use1', 'date_bl', 'parking_type', 'elev_type',
+                'elec_type', 'generator_type', 'heating_type', 'cooling_type', 'contact_name',
+                'contact_phone', 'contact_fax', 'zip'
+            ];
+            
+            fields.forEach(field => {
+                const element = document.getElementById(field);
+                if (element) {
+                    element.value = data[field] || '';
+                }
+            });
+            
+            // 기타정보 데이터
+            const otherFields = [
+                'date_buy', 'date_buy_land', 'date_sailed', 'date_manage_start', 'price_pa_land',
+                'area_fl', 'area_bf', 'area_rentable', 'area_garden', 'price_book_value',
+                'base_rate', 'width_front_road', 'width_back_road', 'width_side_road',
+                'parking_unit_inner', 'parking_unit_outdoor', 'el_unit', 'es_unit', 'comments'
+            ];
+            
+            otherFields.forEach(field => {
+                const element = document.getElementById(field);
+                if (element) {
+                    element.value = data[field] || '';
+                }
+            });
+            
+            // 라디오 버튼 처리
+            this.setRadioValue('regist', data.regist);
+            this.setRadioValue('use_fl_4', data.use_fl_4);
+            this.setRadioValue('use_fl_13', data.use_fl_13);
+            this.setRadioValue('ph', data.ph);
+            
+            // 평수 계산
+            this.calculatePyeong();
+        },
+        
+        // 라디오 버튼 값 설정
+        setRadioValue: function(name, value) {
+            const radios = document.querySelectorAll(`input[name="${name}"]`);
+            radios.forEach(radio => {
+                radio.checked = radio.value === String(value);
+            });
+        },
+        
+        // 평수 계산
+        calculatePyeong: function() {
+            const areaTotalInput = document.getElementById('area_total');
+            const areaTotalPyeongInput = document.getElementById('area_total_pyeong');
+            
+            if (areaTotalInput && areaTotalPyeongInput) {
+                const areaTotal = parseFloat(areaTotalInput.value.replace(/,/g, '')) || 0;
+                const pyeong = areaTotal / 3.3058;
+                areaTotalPyeongInput.value = pyeong > 0 ? pyeong.toFixed(2) : '';
+            }
+        },
+        
+        // 탭 전환
+        showTab: function(tabNumber, element) {
+            // 기존 탭 비활성화
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // 새 탭 활성화
+            if (element) element.classList.add('active');
+            const tabContent = document.getElementById(`tab${tabNumber}_content`);
+            if (tabContent) tabContent.classList.add('active');
+            
+            this.data.currentTab = tabNumber;
+            document.getElementById('current_tab').value = tabNumber;
+            
+            // 탭별 데이터 로드
+            if (this.data.currentBlId) {
+                if (tabNumber === 3) {
+                    this.loadHistoryData();
+                } else if (tabNumber === 4) {
+                    this.loadPhotoData();
+                }
+            }
+        },
+        
+        // 이력 데이터 로드
+        loadHistoryData: function() {
+            if (!this.data.currentBlId) return;
+            
+            const historyType = document.getElementById('history_type').value;
+            const dateStart = document.getElementById('history_date_start').value;
+            const dateEnd = document.getElementById('history_date_end').value;
+            const keyword = document.getElementById('history_search').value;
+            
+            fetch('/fm/bl_update/get_history_data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    bl_id: this.data.currentBlId,
+                    type: historyType,
+                    date_start: dateStart,
+                    date_end: dateEnd,
+                    keyword: keyword
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.renderHistoryTable(data.data);
+                } else {
+                    this.showHistoryError('이력 데이터를 불러올 수 없습니다.');
+                }
+            })
+            .catch(error => {
+                console.error('🏢 이력 데이터 로드 오류:', error);
+                this.showHistoryError('이력 데이터를 불러오는 중 오류가 발생했습니다.');
+            });
+        },
+        
+        // 이력 테이블 렌더링
+        renderHistoryTable: function(data) {
+            const tbody = document.getElementById('history_table_body');
+            
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center">등록된 이력이 없습니다.</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            data.forEach(item => {
+                html += `
+                    <tr onclick="BlUpdateModule.openHistoryDetail(${item.auto_number || 0}, '${this.data.currentBlId}', '${item.type || '2'}')" style="cursor: pointer;">
+                        <td style="text-align:left; padding-left:5px;">${item.title || ''}</td>
+                        <td style="text-align:center;">${item.reg_man_name || item.reg_man || ''}</td>
+                        <td style="text-align:center;">${item.reg_date || ''}</td>
+                        <td style="text-align:center;">${item.filename ? '📁' : ''}</td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+        },
+            
+        
+        // 사진 데이터 로드
+        loadPhotoData: function() {
+            if (!this.data.currentBlId) return;
+            
+            const dateStart = document.getElementById('photo_date_start').value;
+            const dateEnd = document.getElementById('photo_date_end').value;
+            const keyword = document.getElementById('photo_search').value;
+            
+            fetch('/fm/bl_update/get_photo_data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    bl_id: this.data.currentBlId,
+                    date_start: dateStart,
+                    date_end: dateEnd,
+                    keyword: keyword
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.data.photoData = data.data;
+                    this.renderPhotoTable(data.data);
+                } else {
+                    this.showPhotoError('사진 데이터를 불러올 수 없습니다.');
+                }
+            })
+            .catch(error => {
+                console.error('🏢 사진 데이터 로드 오류:', error);
+                this.showPhotoError('사진 데이터를 불러오는 중 오류가 발생했습니다.');
+            });
+        },
+        
+        // 사진 테이블 렌더링
+        renderPhotoTable: function(data) {
+            const tbody = document.getElementById('photo_table_body');
+            
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center">등록된 사진이 없습니다.</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            data.forEach((item, index) => {
+                const mainIndicator = item.is_main_photo ? '<span class="main-photo-indicator">[메인]</span> ' : '';
+                html += `
+                    <tr onclick="BlUpdateModule.selectPhoto(${index})" style="cursor: pointer;">
+                        <td style="text-align:left; padding-left:5px;">${mainIndicator}${item.title || ''}</td>
+                        <td style="text-align:center;">${item.reg_man_name || item.reg_man || ''}</td>
+                        <td style="text-align:center;">${item.reg_date || ''}</td>
+                        <td style="text-align:center;">${item.filename ? '📷' : ''}</td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+        },
+        
+        // 사진 선택
+        selectPhoto: function(index) {
+            if (index >= 0 && index < this.data.photoData.length) {
+                this.data.selectedPhotoIndex = index;
+                const photo = this.data.photoData[index];
+                
+                document.getElementById('photo_title').textContent = photo.title || '제목 없음';
+                
+                if (photo.maskname) {
+                    document.getElementById('photo_image').src = `/fm/bl_update/view_file?auto_number=${photo.auto_number}`;
+                } else {
+                    document.getElementById('photo_image').src = '/static/images/common/no_image.png';
+                }
+            }
+        },
+        
+        // 이전 사진
+        prevPhoto: function() {
+            if (this.data.selectedPhotoIndex > 0) {
+                this.selectPhoto(this.data.selectedPhotoIndex - 1);
+            }
+        },
+        
+        // 다음 사진
+        nextPhoto: function() {
+            if (this.data.selectedPhotoIndex < this.data.photoData.length - 1) {
+                this.selectPhoto(this.data.selectedPhotoIndex + 1);
+            }
+        },
+        
+        // 건물 데이터 저장
+        saveBlData: function() {
+            if (!this.data.currentBlId) {
+                alert('저장할 건물을 선택해주세요.');
+                return;
+            }
+            
+            if (!this.data.hasPermission) {
+                alert('해당 건물의 수정 권한이 없습니다.');
+                return;
+            }
+            
+            // 폼 데이터 수집
+            const formData = this.collectFormData();
+            formData.bl_id = this.data.currentBlId;
+            formData.em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+            
+            console.log('🏢 저장할 데이터:', formData);
+            
+            // 저장 버튼 비활성화
+            const saveBtn = document.getElementById('btn_save');
+            const originalText = saveBtn.textContent;
+            saveBtn.textContent = '저장 중...';
+            saveBtn.disabled = true;
+            
+            fetch('/fm/bl_update/save_bl_data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.showSuccess('저장이 완료되었습니다.');
+                } else {
+                    alert('저장 실패: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('🏢 저장 오류:', error);
+                alert('저장 중 오류가 발생했습니다.');
+            })
+            .finally(() => {
+                // 저장 버튼 복원
+                saveBtn.textContent = originalText;
+                saveBtn.disabled = false;
+            });
+        },
+        
+        // 폼 데이터 수집
+        collectFormData: function() {
+            const data = {};
+            
+            // 모든 입력 필드
+            const inputs = document.querySelectorAll('#bl_update_outer input, #bl_update_outer select, #bl_update_outer textarea');
+            inputs.forEach(input => {
+                if (input.type === 'radio') {
+                    if (input.checked) {
+                        data[input.name] = input.value;
+                    }
+                } else if (input.id && input.id !== 'current_bl_id' && input.id !== 'current_prop_id' && input.id !== 'current_tab') {
+                    data[input.id] = input.value;
+                }
+            });
+            
+            return data;
+        },
+        
+        // 메인사진 삭제
+        deleteMainPhoto: function() {
+            if (!this.data.currentBlId) {
+                alert('건물을 선택해주세요.');
+                return;
+            }
+            
+            if (!confirm('메인사진을 삭제하시겠습니까?')) {
+                return;
+            }
+            
+            fetch('/fm/bl_update/delete_main_photo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bl_id: this.data.currentBlId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.showSuccess('메인사진이 삭제되었습니다.');
+                    // 사진 탭이 활성화되어 있으면 새로고침
+                    if (this.data.currentTab === 4) {
+                        this.loadPhotoData();
+                    }
+                } else {
+                    alert('메인사진 삭제 실패: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('🏢 메인사진 삭제 오류:', error);
+                alert('메인사진 삭제 중 오류가 발생했습니다.');
+            });
+        },
+        
+        // 엑셀 내보내기
+        exportExcel: function() {
+            if (!this.data.currentBlId) {
+                alert('엑셀로 내보낼 건물을 선택해주세요.');
+                return;
+            }
+            
+            const downloadUrl = `/fm/bl_update/export_excel?bl_id=${this.data.currentBlId}`;
+            window.open(downloadUrl, '_blank');
+            
+            this.showSuccess('엑셀 파일을 다운로드합니다.');
+        },
+        
+        // 인쇄
+        printBl: function() {
+            if (!this.data.currentBlId) {
+                alert('인쇄할 건물을 선택해주세요.');
+                return;
+            }
+            
+            window.print();
+        },
+        
+        // 목록으로 이동
+        goToBlList: function() {
+            if (typeof window.loadContent === 'function') {
+                window.loadContent('/fm/bl_list.html', '건물정보');
+                window.showStatus && window.showStatus('건물 목록으로 이동했습니다.');
+            }
+        },
+        
+        // 이력 등록
+        registerHistory: function() {
+            alert('이력 등록 기능을 구현 중입니다.');
+        },
+        
+        // 사진 등록
+        registerPhoto: function() {
+            alert('사진 등록 기능을 구현 중입니다.');
+        },
+        
+        // 권한 UI 업데이트
+        updatePermissionUI: function() {
+            const saveBtn = document.getElementById('btn_save');
+            const deleteBtn = document.getElementById('btn_delete_photo');
+            
+            if (!this.data.hasPermission) {
+                if (saveBtn) {
+                    saveBtn.disabled = true;
+                    saveBtn.title = '수정 권한이 없습니다.';
+                }
+                if (deleteBtn) {
+                    deleteBtn.disabled = true;
+                    deleteBtn.title = '수정 권한이 없습니다.';
+                }
+                
+                // 입력 필드 읽기 전용 설정
+                const inputs = document.querySelectorAll('#bl_update_outer input, #bl_update_outer select, #bl_update_outer textarea');
+                inputs.forEach(input => {
+                    if (input.type !== 'button' && input.type !== 'submit') {
+                        input.readOnly = true;
+                    }
+                });
+            }
+        },
+        
+        // 폼 초기화
+        clearForm: function() {
+            this.data.currentBlId = null;
+            document.getElementById('current_bl_id').value = '';
+            
+            // 모든 입력 필드 초기화
+            const inputs = document.querySelectorAll('#bl_update_outer input, #bl_update_outer select, #bl_update_outer textarea');
+            inputs.forEach(input => {
+                if (input.type === 'radio' || input.type === 'checkbox') {
+                    input.checked = false;
+                } else if (input.type !== 'button' && input.type !== 'submit') {
+                    input.value = '';
+                }
+            });
+        },
+        
+        // 로딩 표시
+        showLoading: function(message = '로딩 중...') {
+            // 간단한 로딩 표시
+            console.log('🏢 로딩:', message);
+        },
+        
+        // 로딩 숨김
+        hideLoading: function() {
+            console.log('🏢 로딩 완료');
+        },
+        
+        // 오류 표시
+        showError: function(message) {
+            console.error('🏢 오류:', message);
+            alert(message);
+        },
+        
+        // 성공 메시지 표시
+        showSuccess: function(message) {
+            console.log('🏢 성공:', message);
+            if (window.showStatus) {
+                window.showStatus(message);
+            } else {
+                alert(message);
+            }
+        },
+        
+        // 이력 테이블 오류 표시
+        showHistoryError: function(message) {
+            const tbody = document.getElementById('history_table_body');
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">${message}</td></tr>`;
+        },
+        
+        // 사진 테이블 오류 표시
+        showPhotoError: function(message) {
+            const tbody = document.getElementById('photo_table_body');
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">${message}</td></tr>`;
+        },
+        // 사진 테이블 오류 표시
+        showPhotoError: function(message) {
+            const tbody = document.getElementById('photo_table_body');
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">${message}</td></tr>`;
+        },
+        
+        // 이력 상세 열기 (blpds_update로 이동)
+        openHistoryDetail: function(autoNumber, blId, type) {
+            console.log('🏢 이력 상세 열기:', { autoNumber, blId, type });
+            
+            if (!autoNumber || autoNumber === 0) {
+                alert('잘못된 이력 정보입니다.');
+                return;
+            }
+            
+            // 전역 변수 설정 (blpds_update에서 사용)
+            window.selected_auto_number = autoNumber;
+            window.selected_bl_id = blId || this.data.currentBlId;
+            window.selected_file_type = type || '2';
+            
+            console.log('🏢 설정된 전역 변수:', {
+                selected_auto_number: window.selected_auto_number,
+                selected_bl_id: window.selected_bl_id,
+                selected_file_type: window.selected_file_type
+            });
+            
+            // blpds_update 탭으로 이동
+            if (typeof window.loadContent === 'function') {
+                window.loadContent('/fm/blpds_update.html', `건물이력상세(${autoNumber})`);
+                window.showStatus && window.showStatus('건물이력 상세 페이지를 열었습니다.');
+            } else {
+                console.error('🏢 loadContent 함수를 찾을 수 없습니다.');
+            }
+        },
+        
+        // 사진 테이블 렌더링 (기존에 없던 함수)
+        renderPhotoTable: function(data) {
+            const tbody = document.getElementById('photo_table_body');
+            
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center">등록된 사진이 없습니다.</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            data.forEach((item, index) => {
+                const mainIndicator = item.is_main_photo ? '<span class="main-photo-indicator">[메인]</span> ' : '';
+                html += `
+                    <tr onclick="BlUpdateModule.selectPhoto(${index})" ondblclick="BlUpdateModule.openHistoryDetail(${item.auto_number || 0}, '${this.data.currentBlId}', '1')" style="cursor: pointer;">
+                        <td style="text-align:left; padding-left:5px;">${mainIndicator}${item.title || ''}</td>
+                        <td style="text-align:center;">${item.reg_man_name || item.reg_man || ''}</td>
+                        <td style="text-align:center;">${item.reg_date || ''}</td>
+                        <td style="text-align:center;">${item.filename ? '📷' : ''}</td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+        }
+    
+    };
+    
+    // 전역 초기화 함수 등록
+    window.initBlUpdatePage = function() {
+        window.BlUpdateModule.init();
+    };
+    
+    // 자동 초기화 (즉시 실행)
+    setTimeout(() => {
+        if (!window.BlUpdateModule.data.isInitialized) {
+            console.log('🏢 자동 초기화 시작');
+            window.BlUpdateModule.init();
+        }
+    }, 500);
+    
+    console.log('🏢 BlUpdateModule 로드 완료');
+    
+})(); // 즉시 실행 함수 끝
+</script>

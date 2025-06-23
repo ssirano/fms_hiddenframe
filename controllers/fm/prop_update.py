@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, session, make_response, json
 from controllers.auth import login_required
-from sqlalchemy import text
-from db import engine
+from sqlalchemy import text 
+from db import engine, get_session
 import math
 import os
 from werkzeug.utils import secure_filename
@@ -245,7 +245,7 @@ def save_prop_update_data(request_data):
     """사업장 정보 저장"""
     try:
         prop_id = request_data.get('prop_id')
-        
+
         if not prop_id:
             return jsonify({'success': False, 'message': '사업장 ID가 필요합니다.'})
 
@@ -280,22 +280,26 @@ def save_prop_update_data(request_data):
             WHERE prop_id = :prop_id
         """)
 
-        with engine.connect() as conn:
+        # with engine.connect() as conn: # 이 부분을 아래와 같이 변경
+        with get_session() as session_obj: # get_session 컨텍스트 매니저 사용
+            conn = session_obj.connection() # Connection 객체는 session_obj.connection()으로 얻음
+
+
             # 먼저 해당 prop_id가 존재하는지 확인
             check_sql = text("SELECT COUNT(*) as cnt FROM prop WHERE prop_id = :prop_id")
             check_result = conn.execute(check_sql, {"prop_id": prop_id}).fetchone()
-            
+
             if check_result['cnt'] == 0:
                 return jsonify({'success': False, 'message': f'사업장 ID "{prop_id}"가 존재하지 않습니다.'})
-            
+
             # 업데이트 실행
             result = conn.execute(sql, params)
-            conn.commit()
-            
+            # conn.commit() # session_obj가 commit을 관리하므로 삭제
+
             if result.rowcount > 0:
                 return jsonify({
                     'success': True,
-                    'message': '데이터가 성공적으로 저장되었습니다.'
+                    'message': '사업장 정보가 성공적으로 저장되었습니다.' # 메시지 변경
                 })
             else:
                 return jsonify({'success': False, 'message': '변경사항이 없습니다.'})
@@ -303,6 +307,7 @@ def save_prop_update_data(request_data):
     except Exception as e:
         print(f'save_prop_update_data 오류 발생: {str(e)}')
         return jsonify({'success': False, 'message': f'데이터 저장 중 오류가 발생했습니다: {str(e)}'})
+
 
 def handle_image_upload(request_data):
     """이미지 업로드 처리"""

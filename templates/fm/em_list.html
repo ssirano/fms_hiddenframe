@@ -1,4 +1,4 @@
-<!-- SPA 탭용 직원정보 페이지 -->
+<!-- HiddenFrame 탭용 직원정보 페이지 -->
 <link rel="stylesheet" href="/static/css/common.css">
 <style>
     /* 직원정보 페이지 전용 스타일 */
@@ -234,654 +234,684 @@
 </div>
 
 <script>
-// 전역 변수
-console.log('📝 em_list.html 스크립트 시작!');
-console.log('📝 현재 window 객체:', {
-    currentEmId: window.currentEmId,
-    currentPropId: window.currentPropId,
-    userInfo: window.userInfo
-});
-let isEmployeePageInitialized = false;
-
-let selectedEmployeeId = null;
-let currentSort = { field: 'basic', direction: 'asc' };
-let currentPage = 1;
-let totalPages = 1;
-let totalCount = 0;
-let searchParams = {
-    prop_id_chk: '',
-    emclass_id: '',
-    emstd_id: '',
-    status: '',
-    name_sch: '',
-    order: 'basic',
-    desc: 'asc',
-    page_no: 1
-};
-
-// 페이지 초기화 - base.html의 em_id, prop_id 직접 사용
-function initEmployeePage() {
-    console.log('📝 직원정보 페이지 초기화 시작');
+// 🛡️ HiddenFrame 전용 스코프 분리 (네임스페이스 충돌 방지)
+(function() {
+    'use strict';
     
-    // 중복 실행 방지
-    if (isEmployeePageInitialized) {
-        console.log('📝 이미 초기화됨, 중복 실행 방지');
-        return;
+    console.log('📝 em_list.html HiddenFrame 스크립트 시작!');
+    
+    // 🆕 HiddenFrame 전용 모듈 생성
+    if (typeof window.EmployeeModule !== 'undefined') {
+        console.log('📝 기존 EmployeeModule 재사용');
+        return; // 이미 로드됨
     }
     
-    // base.html에서 em_id와 prop_id 가져오기
-    const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
-    const prop_id = window.currentPropId;
-    
-    console.log('📝 받은 데이터:', { em_id, prop_id });
-    
-    if (!em_id) {
-        console.error('📝 em_id가 없습니다.');
-        document.getElementById('employee-table-body').innerHTML = 
-            '<tr><td colspan="5" class="text-center text-danger">사용자 정보를 불러올 수 없습니다.</td></tr>';
-        return;
-    }
-    
-    if (!prop_id) {
-        console.error('📝 prop_id가 없습니다.');
-        document.getElementById('employee-table-body').innerHTML = 
-            '<tr><td colspan="5" class="text-center text-danger">사업소를 선택해주세요.</td></tr>';
-        return;
-    }
-    
-    // 초기화 플래그 설정
-    isEmployeePageInitialized = true;
-    
-    // 검색 파라미터에 설정
-    searchParams.prop_id_chk = prop_id;
-    
-    console.log('📝 검색 파라미터 설정 완료:', searchParams);
-    
-    // 필터 옵션 로드
-    loadFilterOptions();
-    
-    // 검색 실행
-    setTimeout(() => {
-        console.log('📝 직원 검색 실행 시작');
-        searchEmployees();
-    }, 500);
-}
-
-// base.html의 사업소 변경 감지 (전역 함수) - 더 안정적으로 수정
-window.onEmployeePagePropChange = function(newPropId) {
-    console.log('📝 사업소 변경 감지:', newPropId);
-    
-    if (!newPropId) {
-        console.warn('📝 새로운 prop_id가 없습니다.');
-        return;
-    }
-    
-    // 초기화 플래그 리셋 (이 줄 추가)
-    isEmployeePageInitialized = false;
-    
-    searchParams.prop_id_chk = newPropId;
-    
-    // 선택된 직원 초기화
-    selectedEmployeeId = null;
-    document.getElementById('employee-detail-placeholder').style.display = 'block';
-    document.getElementById('employee-detail-content').style.display = 'none';
-    
-    // 필터 옵션 다시 로드
-    loadFilterOptions();
-    
-    // 검색 다시 실행
-    setTimeout(() => {
-        console.log('📝 사업소 변경 후 검색 실행');
-        searchEmployees();
-    }, 300);
-};
-// 필터 옵션 로드 (파트, 직급, 상태) - JSP와 동일한 방식
-function loadFilterOptions() {
-    const propId = searchParams.prop_id_chk;
-    if (!propId) return;
-
-    // 파트 목록 - JSP와 동일한 조회 방식
-    fetch('/common/get_select_options', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            table: 'emclass',
-            id_field: 'emclass_id',
-            text_field: 'emclass_id',
-            conditions: { prop_id: propId },
-            order_by: 'vieworder ASC'
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        const select = document.getElementById('emclass_id');
-        select.innerHTML = '<option value="">-전체-</option>';
-        if (data.success) {
-            data.data.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.id;
-                option.textContent = item.text;
-                select.appendChild(option);
-            });
-        }
-    });
-
-    // 직급 목록 - JSP와 동일한 조회 방식
-    fetch('/common/get_select_options', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            table: 'emstd',
-            id_field: 'emstd_id',
-            text_field: 'emstd_id',
-            conditions: { prop_id: propId },
-            order_by: 'vieworder ASC'
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        const select = document.getElementById('emstd_id');
-        select.innerHTML = '<option value="">-전체-</option>';
-        if (data.success) {
-            data.data.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.id;
-                option.textContent = item.text;
-                select.appendChild(option);
-            });
-        }
-    });
-}
-
-// 직원 검색 - 더 안정적으로 수정
-function searchEmployees() {
-    console.log('📝 직원 검색 실행 시작');
-    
-    // prop_id 확인
-    if (!searchParams.prop_id_chk) {
-        // base.html에서 현재 선택된 사업소 다시 확인
-        const prop_id = window.currentPropId;
-        if (prop_id) {
-            searchParams.prop_id_chk = prop_id;
-            console.log('📝 base.html에서 prop_id 재설정:', prop_id);
-        } else {
-            console.error('📝 prop_id를 찾을 수 없습니다.');
-            document.getElementById('employee-table-body').innerHTML = 
-                '<tr><td colspan="5" class="text-center text-danger">사업소를 선택해주세요.</td></tr>';
-            return;
-        }
-    }
-    
-    // 검색 조건 수집
-    searchParams = {
-        prop_id_chk: searchParams.prop_id_chk,
-        emclass_id: document.getElementById('emclass_id').value,
-        emstd_id: document.getElementById('emstd_id').value,
-        status: document.getElementById('status').value,
-        name_sch: document.getElementById('name_sch').value,
-        order: currentSort.field,
-        desc: currentSort.direction,
-        page_no: currentPage
-    };
-
-    console.log('📝 최종 검색 파라미터:', searchParams);
-
-    // 로딩 표시
-    document.getElementById('employee-table-body').innerHTML = 
-        '<tr><td colspan="5" class="text-center">검색 중...</td></tr>';
-
-    // AJAX 요청
-    fetch('/fm/em_entry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            c_type: 'list',
-            ...searchParams
-        })
-    })
-    .then(response => {
-        console.log('📝 서버 응답 상태:', response.status);
-        return response.json();
-    })
-    .then(data => {
-        console.log('📝 서버 응답 데이터:', data);
+    window.EmployeeModule = {
+        // 데이터 저장소
+        data: {
+            selectedEmployeeId: null,
+            currentSort: { field: 'basic', direction: 'asc' },
+            currentPage: 1,
+            totalPages: 1,
+            totalCount: 0,
+            searchParams: {
+                prop_id_chk: '',
+                emclass_id: '',
+                emstd_id: '',
+                status: '',
+                name_sch: '',
+                order: 'basic',
+                desc: 'asc',
+                page_no: 1
+            },
+            isInitialized: false
+        },
         
-        if (data.success) {
-            console.log('📝 직원 데이터 수신 성공, 건수:', data.data.length);
-            renderEmployeeList(data.data);
-            updatePagination(data.total_count, data.total_pages, data.current_page);
-        } else {
-            console.error('📝 검색 실패:', data.message);
-            document.getElementById('employee-table-body').innerHTML = 
-                '<tr><td colspan="5" class="text-center text-danger">검색 실패: ' + data.message + '</td></tr>';
-        }
-    })
-    .catch(error => {
-        console.error('📝 직원 검색 오류:', error);
-        document.getElementById('employee-table-body').innerHTML = 
-            '<tr><td colspan="5" class="text-center text-danger">검색 중 오류가 발생했습니다: ' + error.message + '</td></tr>';
-    });
-}
-
-// 직원 목록 렌더링
-function renderEmployeeList(employees) {
-    const tbody = document.getElementById('employee-table-body');
-    
-    if (employees.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center">검색 결과가 없습니다.</td></tr>';
-        return;
-    }
-
-    let html = '';
-    employees.forEach(emp => {
-        html += `
-            <tr class="employee-row" onclick="selectEmployee('${emp.em_id}', this)">
-                <td>${emp.name || ''}</td>
-                <td>${emp.emstd_id || ''}</td>
-                <td>${emp.emclass_id || ''}</td>
-                <td>${emp.status || ''}</td>
-                <td>${emp.mobile_phone || ''}</td>
-            </tr>
-        `;
-    });
-    
-    tbody.innerHTML = html;
-}
-
-// 페이징 정보 업데이트
-function updatePagination(total, pages, current) {
-    totalCount = total;
-    totalPages = pages;
-    currentPage = current;
-
-    // 카운트 정보 업데이트
-    document.getElementById('employee-count-text').textContent = `총 ${total}명`;
-    document.getElementById('employee-page-text').textContent = `${current} / ${pages} 페이지`;
-    document.getElementById('page-info').textContent = `${current} / ${pages}`;
-
-    // 페이징 버튼 상태 업데이트
-    document.getElementById('btn-first').disabled = current <= 1;
-    document.getElementById('btn-prev').disabled = current <= 1;
-    document.getElementById('btn-next').disabled = current >= pages;
-    document.getElementById('btn-last').disabled = current >= pages;
-}
-
-// 직원 선택
-function selectEmployee(em_id, element) {
-    // 기존 선택 제거
-    document.querySelectorAll('.employee-row').forEach(row => {
-        row.classList.remove('selected');
-    });
-    
-    // 새로 선택
-    element.classList.add('selected');
-    selectedEmployeeId = em_id;
-    
-    // 상세 정보 표시
-    document.getElementById('employee-detail-placeholder').style.display = 'none';
-    document.getElementById('employee-detail-content').style.display = 'block';
-    
-    // 기본적으로 직원정보 탭 표시
-    showTab('info');
-}
-
-// 탭 표시
-function showTab(tabType, element) {
-    // 탭 활성화
-    document.querySelectorAll('.nav-tab').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    if (element) element.classList.add('active');
-    
-    const tabContent = document.getElementById('tab-content');
-    if (!selectedEmployeeId) {
-        tabContent.innerHTML = '<div class="tab-loading">직원을 먼저 선택해주세요.</div>';
-        return;
-    }
-    
-    tabContent.innerHTML = '<div class="tab-loading">로딩 중...</div>';
-    
-    if (tabType === 'info') {
-        loadEmployeeInfo();
-    } else if (tabType === 'history') {
-        loadEmployeeHistory();
-    } else if (tabType === 'license') {
-        loadEmployeeLicense();
-    }
-}
-
-// 직원 상세 정보 로드
-function loadEmployeeInfo() {
-    fetch('/fm/em_entry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ c_type: 'detail', em_id: selectedEmployeeId })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            renderEmployeeDetail(data.data);
-        } else {
-            document.getElementById('tab-content').innerHTML = 
-                '<div class="tab-error">직원 정보를 불러올 수 없습니다.</div>';
-        }
-    })
-    .catch(error => {
-        console.error('직원 정보 로드 오류:', error);
-        document.getElementById('tab-content').innerHTML = 
-            '<div class="tab-error">직원 정보를 불러올 수 없습니다.</div>';
-    });
-}
-
-// 직원 상세 정보 렌더링
-function renderEmployeeDetail(employee) {
-    const html = `
-        <table class="detail-table" style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:12px;">
-            <tr>
-                <td class="detail-label">이름</td>
-                <td class="detail-value">${employee.name || ''}
-                    <button type="button" class="btn btn-warning" style="float:right;padding:4px 8px;font-size:11px;" onclick="editEmployee('${employee.em_id}')">수정</button>
-                </td>
-                <td class="detail-label" rowspan="5" style="text-align:center;vertical-align:middle;">사진</td>
-                <td class="detail-value" rowspan="5" style="text-align:center;vertical-align:middle;">
-                    <img 
-                        src="/static/images/employees/${employee.maskname || 'noimg.gif'}" 
-                        class="employee-photo" 
-                        alt="직원사진" 
-                        onerror="this.onerror=null; this.src='/static/images/common/noimg.gif';"
-                    >
-                </td>
-            </tr>
-            <tr>
-                <td class="detail-label">생일</td>
-                <td class="detail-value">${employee.birthday || ''}</td>
-            </tr>
-            <tr>
-                <td class="detail-label">전화번호</td>
-                <td class="detail-value">${employee.phone || ''}</td>
-            </tr>
-            <tr>
-                <td class="detail-label">핸드폰</td>
-                <td class="detail-value">${employee.mobile_phone || ''}</td>
-            </tr>
-            <tr>
-                <td class="detail-label">이메일</td>
-                <td class="detail-value">${employee.email || ''}</td>
-            </tr>
-            <tr>
-                <td class="detail-label">주소</td>
-                <td class="detail-value" colspan="3">${employee.address || ''}</td>
-            </tr>
-            <tr>
-                <td class="detail-label">소속</td>
-                <td class="detail-value">${employee.prop_name || ''}</td>
-                <td class="detail-label">근무지</td>
-                <td class="detail-value">${employee.work_address || ''}</td>
-            </tr>
-            <tr>
-                <td class="detail-label">성별</td>
-                <td class="detail-value">${employee.sex || ''}</td>
-                <td class="detail-label">파트</td>
-                <td class="detail-value">${employee.emclass_id || ''}</td>
-            </tr>
-            <tr>
-                <td class="detail-label">회사명</td>
-                <td class="detail-value">${employee.com_id || ''}</td>
-                <td class="detail-label">직급</td>
-                <td class="detail-value">${employee.emstd_id || ''}</td>
-            </tr>
-            <tr>
-                <td class="detail-label">부서명</td>
-                <td class="detail-value">${employee.dvp_id || ''}</td>
-                <td class="detail-label" rowspan="3" style="text-align: center; vertical-align: middle;">사인</td>
-                <td class="detail-value" rowspan="3" style="text-align: center; vertical-align: middle;">
-                    ${employee.signature ? 
-                        `<img 
-                        src="/static/images/signatures/${employee.signature || 'nosign.gif'}" 
-                        class="employee-signature" 
-                        alt="사인" 
-                        onerror="this.onerror=null; this.src='/static/images/common/nosign.gif';"
-                    />` :
-                        `<img src="/static/images/common/nosign.gif" class="employee-signature" alt="사인없음">`
-                    }
-                </td>
-            </tr>
-            <tr>
-                <td class="detail-label">입사일</td>
-                <td class="detail-value">${employee.date_start || ''}</td>
-            </tr>
-            <tr>
-                <td class="detail-label">등록일</td>
-                <td class="detail-value">${employee.date_reg || ''}</td>
-            </tr>
-            <tr>
-                <td class="detail-label">상의 사이즈</td>
-                <td class="detail-value">${employee.top_size || ''}</td>
-                <td class="detail-label">퇴사일</td>
-                <td class="detail-value">${employee.date_end || ''}</td>
-            </tr>
-            <tr>
-                <td class="detail-label">하의 사이즈</td>
-                <td class="detail-value">${employee.bottom_size || ''}</td>
-                <td class="detail-label">수정일</td>
-                <td class="detail-value">${employee.date_modi || ''}</td>
-            </tr>
-        </table>
-    `;
-    
-    document.getElementById('tab-content').innerHTML = html;
-}
-
-// 직원 이력 로드
-function loadEmployeeHistory() {
-    fetch('/fm/em_entry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ c_type: 'history', em_id: selectedEmployeeId })
-    })
-    .then(response => response.json())
-    .then(data => {
-        let html = `
-            <div style="margin-bottom: 15px;">
-                <button class="btn btn-primary" onclick="addHistory()">이력 등록</button>
-            </div>
-            <table class="data-table">
-                <thead>
-                    <tr><th>번호</th><th>설명</th><th>파일</th><th>등록일</th></tr>
-                </thead>
-                <tbody>
-        `;
-        
-        if (data.success && data.data.length > 0) {
-            data.data.forEach(item => {
-                html += `
-                    <tr>
-                        <td>${item.auto_number || ''}</td>
-                        <td>${(item.filetype || '') + ' ' + (item.comments || '')}</td>
-                        <td>${item.filename || ''}</td>
-                        <td>${item.reg_date || ''}</td>
-                    </tr>
-                `;
-            });
-        } else {
-            html += '<tr><td colspan="4" class="text-center">등록된 이력이 없습니다.</td></tr>';
-        }
-        
-        html += '</tbody></table>';
-        document.getElementById('tab-content').innerHTML = html;
-    })
-    .catch(error => {
-        console.error('직원 이력 로드 오류:', error);
-        document.getElementById('tab-content').innerHTML = 
-            '<div class="tab-error">이력 정보를 불러올 수 없습니다.</div>';
-    });
-}
-
-// 직원 자격증 로드
-function loadEmployeeLicense() {
-    fetch('/fm/em_entry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ c_type: 'license', em_id: selectedEmployeeId })
-    })
-    .then(response => response.json())
-    .then(data => {
-        let html = `
-            <table class="data-table">
-                <thead>
-                    <tr><th>번호</th><th>직원ID</th><th>자격증명</th><th>취득일자</th><th>비고</th></tr>
-                </thead>
-                <tbody>
-        `;
-        
-        if (data.success && data.data.length > 0) {
-            data.data.forEach(item => {
-                html += `
-                    <tr>
-                        <td>${item.licenceem_id || ''}</td>
-                        <td>${item.em_id || ''}</td>
-                        <td>${item.licence_id || ''}</td>
-                        <td>${item.certici_date || ''}</td>
-                        <td>${item.description || ''}</td>
-                    </tr>
-                `;
-            });
-        } else {
-            html += '<tr><td colspan="5" class="text-center">등록된 자격증이 없습니다.</td></tr>';
-        }
-        
-        html += '</tbody></table>';
-        document.getElementById('tab-content').innerHTML = html;
-    })
-    .catch(error => {
-        console.error('직원 자격증 로드 오류:', error);
-        document.getElementById('tab-content').innerHTML = 
-            '<div class="tab-error">자격증 정보를 불러올 수 없습니다.</div>';
-    });
-}
-
-// 정렬
-function sortBy(field) {
-    if (currentSort.field === field) {
-        currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
-    } else {
-        currentSort.field = field;
-        currentSort.direction = 'asc';
-    }
-    
-    currentPage = 1; // 정렬 시 첫 페이지로
-    searchEmployees();
-}
-
-// 페이지 변경
-function changePage(pageNo) {
-    if (pageNo < 1 || pageNo > totalPages) return;
-    currentPage = pageNo;
-    searchEmployees();
-}
-
-// JSP 기능 - 검색, 등록, 엑셀저장
-function insertEmployee() {
-    if (window.showStatus) {
-        window.showStatus('직원 등록 기능을 구현 중입니다.');
-    } else {
-        alert('직원 등록 기능을 구현 중입니다.');
-    }
-}
-
-function exportExcel() {
-    if (!searchParams.prop_id_chk) {
-        alert('사업소를 선택해주세요.');
-        return;
-    }
-    
-    // 엑셀 다운로드 파라미터 구성
-    const excelParams = new URLSearchParams({
-        prop_id_chk: searchParams.prop_id_chk,
-        emclass_id: searchParams.emclass_id,
-        emstd_id: searchParams.emstd_id,
-        status: searchParams.status,
-        name_sch: searchParams.name_sch
-    });
-    
-    // 엑셀 다운로드 실행
-    const downloadUrl = `/fm/em_list_excel?${excelParams.toString()}`;
-    window.open(downloadUrl, '_blank');
-    
-    if (window.showStatus) {
-        window.showStatus('엑셀 파일을 다운로드합니다.');
-    }
-}
-
-function editEmployee(em_id) {
-    if (window.showStatus) {
-        window.showStatus(`직원 수정 기능을 구현 중입니다. 직원 ID: ${em_id}`);
-    } else {
-        alert(`직원 수정 기능을 구현 중입니다. 직원 ID: ${em_id}`);
-    }
-}
-
-function addHistory() {
-    if (window.showStatus) {
-        window.showStatus('이력 등록 기능을 구현 중입니다.');
-    } else {
-        alert('이력 등록 기능을 구현 중입니다.');
-    }
-}
-
-// 페이지 초기화 실행 - 더 안정적으로 수정
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('📝 em_list DOMContentLoaded 이벤트 발생');
-    
-    // base.html 데이터 확인 함수
-    function checkBaseData() {
-        const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
-        const prop_id = window.currentPropId;
-        
-        console.log('📝 base.html 데이터 확인 결과:', { em_id, prop_id });
-        
-        if (em_id && prop_id && !isEmployeePageInitialized) {
-            console.log('📝 ✅ base.html 데이터 준비 완료, 초기화 시작');
-            initEmployeePage();
+        // 🆕 HiddenFrame 상태 확인
+        isVisible: function() {
+            const container = document.getElementById('em-list-container');
+            if (!container) return false;
+            
+            // 부모 탭 컨테이너가 표시되고 있는지 확인
+            let current = container;
+            while (current) {
+                if (current.style && current.style.display === 'none') {
+                    return false;
+                }
+                current = current.parentElement;
+                if (current && current.classList && current.classList.contains('tab-container')) {
+                    break;
+                }
+            }
             return true;
-        }
+        },
         
-        return false;
-    }
-    
-    // 즉시 확인
-    if (checkBaseData()) {
-        return;
-    }
-    
-    console.log('📝 데이터 대기 시작...');
-    
-    // 사용자 정보 로드 대기 (최대 5초)
-    const checkUserInfo = setInterval(() => {
-        if (checkBaseData()) {
-            clearInterval(checkUserInfo);
+        // 초기화
+        init: function() {
+            console.log('📝 직원정보 페이지 초기화 시작 (HiddenFrame)');
+            
+            // 🆕 HiddenFrame: 숨겨진 상태에서는 초기화 하지 않음
+            if (!this.isVisible()) {
+                console.log('📝 숨겨진 상태이므로 초기화 대기');
+                return;
+            }
+            
+            if (this.data.isInitialized) {
+                console.log('📝 이미 초기화됨, 검색만 재실행');
+                this.searchEmployees();
+                return;
+            }
+            
+            const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+            const prop_id = window.currentPropId;
+            
+            console.log('📝 받은 데이터:', { em_id, prop_id });
+            
+            if (!em_id) {
+                this.showError('사용자 정보를 불러올 수 없습니다.');
+                return;
+            }
+            
+            if (!prop_id) {
+                this.showError('사업소를 선택해주세요.');
+                return;
+            }
+            
+            this.data.isInitialized = true;
+            this.data.searchParams.prop_id_chk = prop_id;
+            
+            // 🆕 HiddenFrame 이벤트 리스너 등록
+            this.bindHiddenFrameEvents();
+            
+            this.loadFilterOptions();
+            
+            setTimeout(() => {
+                this.searchEmployees();
+            }, 300);
+        },
+        
+        // 🆕 HiddenFrame 이벤트 바인딩
+        bindHiddenFrameEvents: function() {
+            const container = document.getElementById('em-list-container');
+            if (!container) return;
+            
+            // 탭이 visible 될 때 이벤트 처리
+            container.addEventListener('tabVisible', (e) => {
+                console.log('📝 직원정보 탭이 다시 표시됨');
+                if (!this.data.isInitialized) {
+                    this.init();
+                }
+            });
+            
+            // 사업소 변경 이벤트 처리
+            container.addEventListener('propChanged', (e) => {
+                console.log('📝 사업소 변경 감지:', e.detail);
+                this.onPropChanged(e.detail.propId);
+            });
+        },
+        
+        // 사업소 변경 처리
+        onPropChanged: function(newPropId) {
+            console.log('📝 사업소 변경 처리:', newPropId);
+            
+            if (!newPropId) return;
+            
+            this.data.searchParams.prop_id_chk = newPropId;
+            
+            // 선택된 직원 초기화
+            this.data.selectedEmployeeId = null;
+            const placeholder = document.getElementById('employee-detail-placeholder');
+            const content = document.getElementById('employee-detail-content');
+            if (placeholder) placeholder.style.display = 'block';
+            if (content) content.style.display = 'none';
+            
+            // 필터 옵션 다시 로드
+            this.loadFilterOptions();
+            
+            // 검색 다시 실행
+            setTimeout(() => {
+                this.searchEmployees();
+            }, 300);
+        },
+        
+        // 필터 옵션 로드
+        loadFilterOptions: function() {
+            const propId = this.data.searchParams.prop_id_chk;
+            if (!propId) return;
+
+            // 파트 목록
+            fetch('/common/get_select_options', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    table: 'emclass',
+                    id_field: 'emclass_id',
+                    text_field: 'emclass_id',
+                    conditions: { prop_id: propId },
+                    order_by: 'vieworder ASC'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const select = document.getElementById('emclass_id');
+                if (select) {
+                    select.innerHTML = '<option value="">-전체-</option>';
+                    if (data.success) {
+                        data.data.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.id;
+                            option.textContent = item.text;
+                            select.appendChild(option);
+                        });
+                    }
+                }
+            });
+
+            // 직급 목록
+            fetch('/common/get_select_options', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    table: 'emstd',
+                    id_field: 'emstd_id',
+                    text_field: 'emstd_id',
+                    conditions: { prop_id: propId },
+                    order_by: 'vieworder ASC'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const select = document.getElementById('emstd_id');
+                if (select) {
+                    select.innerHTML = '<option value="">-전체-</option>';
+                    if (data.success) {
+                        data.data.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.id;
+                            option.textContent = item.text;
+                            select.appendChild(option);
+                        });
+                    }
+                }
+            });
+        },
+        
+        // 직원 검색
+        searchEmployees: function() {
+            console.log('📝 직원 검색 실행 시작 (HiddenFrame)');
+            
+            // HiddenFrame: 숨겨진 상태에서는 검색하지 않음
+            if (!this.isVisible()) {
+                console.log('📝 숨겨진 상태이므로 검색 중단');
+                return;
+            }
+            
+            if (!this.data.searchParams.prop_id_chk) {
+                const prop_id = window.currentPropId;
+                if (prop_id) {
+                    this.data.searchParams.prop_id_chk = prop_id;
+                } else {
+                    this.showError('사업소를 선택해주세요.');
+                    return;
+                }
+            }
+            
+            // 검색 조건 수집
+            this.data.searchParams = {
+                prop_id_chk: this.data.searchParams.prop_id_chk,
+                emclass_id: this.getElementValue('emclass_id'),
+                emstd_id: this.getElementValue('emstd_id'),
+                status: this.getElementValue('status'),
+                name_sch: this.getElementValue('name_sch'),
+                order: this.data.currentSort.field,
+                desc: this.data.currentSort.direction,
+                page_no: this.data.currentPage
+            };
+
+            console.log('📝 최종 검색 파라미터:', this.data.searchParams);
+
+            this.showLoading();
+
+            fetch('/fm/em_entry', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    c_type: 'list',
+                    ...this.data.searchParams
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.renderEmployeeList(data.data);
+                    this.updatePagination(data.total_count, data.total_pages, data.current_page);
+                } else {
+                    this.showError('검색 실패: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('📝 직원 검색 오류:', error);
+                this.showError('검색 중 오류가 발생했습니다: ' + error.message);
+            });
+        },
+        
+        // 헬퍼 함수들
+        getElementValue: function(id) {
+            const element = document.getElementById(id);
+            return element ? element.value : '';
+        },
+        
+        showLoading: function() {
+            const tbody = document.getElementById('employee-table-body');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center">검색 중...</td></tr>';
+            }
+        },
+        
+        showError: function(message) {
+            const tbody = document.getElementById('employee-table-body');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${message}</td></tr>`;
+            }
+        },
+        
+        // 직원 목록 렌더링
+        renderEmployeeList: function(employees) {
+            const tbody = document.getElementById('employee-table-body');
+            if (!tbody) return;
+            
+            if (employees.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center">검색 결과가 없습니다.</td></tr>';
+                return;
+            }
+
+            let html = '';
+            employees.forEach(emp => {
+                html += `
+                    <tr class="employee-row" onclick="EmployeeModule.selectEmployee('${emp.em_id}', this)">
+                        <td>${emp.name || ''}</td>
+                        <td>${emp.emstd_id || ''}</td>
+                        <td>${emp.emclass_id || ''}</td>
+                        <td>${emp.status || ''}</td>
+                        <td>${emp.mobile_phone || ''}</td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = html;
+        },
+        
+        // 페이징 정보 업데이트
+        updatePagination: function(total, pages, current) {
+            this.data.totalCount = total;
+            this.data.totalPages = pages;
+            this.data.currentPage = current;
+
+            const countText = document.getElementById('employee-count-text');
+            const pageText = document.getElementById('employee-page-text');
+            const pageInfo = document.getElementById('page-info');
+            
+            if (countText) countText.textContent = `총 ${total}명`;
+            if (pageText) pageText.textContent = `${current} / ${pages} 페이지`;
+            if (pageInfo) pageInfo.textContent = `${current} / ${pages}`;
+
+            const btnFirst = document.getElementById('btn-first');
+            const btnPrev = document.getElementById('btn-prev');
+            const btnNext = document.getElementById('btn-next');
+            const btnLast = document.getElementById('btn-last');
+            
+            if (btnFirst) btnFirst.disabled = current <= 1;
+            if (btnPrev) btnPrev.disabled = current <= 1;
+            if (btnNext) btnNext.disabled = current >= pages;
+            if (btnLast) btnLast.disabled = current >= pages;
+        },
+        
+        // 직원 선택
+        selectEmployee: function(em_id, element) {
+            document.querySelectorAll('.employee-row').forEach(row => {
+                row.classList.remove('selected');
+            });
+            
+            element.classList.add('selected');
+            this.data.selectedEmployeeId = em_id;
+            
+            const placeholder = document.getElementById('employee-detail-placeholder');
+            const content = document.getElementById('employee-detail-content');
+            if (placeholder) placeholder.style.display = 'none';
+            if (content) content.style.display = 'block';
+            
+            this.showTab('info');
+        },
+        
+        // 탭 표시
+        showTab: function(tabType, element) {
+            if (element) {
+                document.querySelectorAll('.nav-tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                element.classList.add('active');
+            }
+            
+            const tabContent = document.getElementById('tab-content');
+            if (!this.data.selectedEmployeeId) {
+                if (tabContent) tabContent.innerHTML = '<div class="tab-loading">직원을 먼저 선택해주세요.</div>';
+                return;
+            }
+            
+            if (tabContent) tabContent.innerHTML = '<div class="tab-loading">로딩 중...</div>';
+            
+            if (tabType === 'info') {
+                this.loadEmployeeInfo();
+            } else if (tabType === 'history') {
+                this.loadEmployeeHistory();
+            } else if (tabType === 'license') {
+                this.loadEmployeeLicense();
+            }
+        },
+        
+        // 직원 상세 정보 로드
+        loadEmployeeInfo: function() {
+            fetch('/fm/em_entry', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ c_type: 'detail', em_id: this.data.selectedEmployeeId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.renderEmployeeDetail(data.data);
+                } else {
+                    const tabContent = document.getElementById('tab-content');
+                    if (tabContent) tabContent.innerHTML = '<div class="tab-error">직원 정보를 불러올 수 없습니다.</div>';
+                }
+            })
+            .catch(error => {
+                console.error('직원 정보 로드 오류:', error);
+                const tabContent = document.getElementById('tab-content');
+                if (tabContent) tabContent.innerHTML = '<div class="tab-error">직원 정보를 불러올 수 없습니다.</div>';
+            });
+        },
+        
+        // 직원 상세 정보 렌더링
+        renderEmployeeDetail: function(employee) {
+            const html = `
+                <table class="detail-table" style="width:100%; border-collapse:collapse; table-layout:fixed; font-size:12px;">
+                    <tr>
+                        <td class="detail-label">이름</td>
+                        <td class="detail-value">${employee.name || ''}
+                            <button type="button" class="btn btn-warning" style="float:right;padding:4px 8px;font-size:11px;" onclick="EmployeeModule.editEmployee('${employee.em_id}')">수정</button>
+                        </td>
+                        <td class="detail-label" rowspan="5" style="text-align:center;vertical-align:middle;">사진</td>
+                        <td class="detail-value" rowspan="5" style="text-align:center;vertical-align:middle;">
+                            <img 
+                                src="/static/images/employees/${employee.maskname || 'noimg.gif'}" 
+                                class="employee-photo" 
+                                alt="직원사진" 
+                                onerror="this.onerror=null; this.src='/static/images/common/noimg.gif';"
+                            >
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="detail-label">생일</td>
+                        <td class="detail-value">${employee.birthday || ''}</td>
+                    </tr>
+                    <tr>
+                        <td class="detail-label">전화번호</td>
+                        <td class="detail-value">${employee.phone || ''}</td>
+                    </tr>
+                    <tr>
+                        <td class="detail-label">핸드폰</td>
+                        <td class="detail-value">${employee.mobile_phone || ''}</td>
+                    </tr>
+                    <tr>
+                        <td class="detail-label">이메일</td>
+                        <td class="detail-value">${employee.email || ''}</td>
+                    </tr>
+                    <tr>
+                        <td class="detail-label">주소</td>
+                        <td class="detail-value" colspan="3">${employee.address || ''}</td>
+                    </tr>
+                    <tr>
+                        <td class="detail-label">소속</td>
+                        <td class="detail-value">${employee.prop_name || ''}</td>
+                        <td class="detail-label">근무지</td>
+                        <td class="detail-value">${employee.work_address || ''}</td>
+                    </tr>
+                    <tr>
+                        <td class="detail-label">성별</td>
+                        <td class="detail-value">${employee.sex || ''}</td>
+                        <td class="detail-label">파트</td>
+                        <td class="detail-value">${employee.emclass_id || ''}</td>
+                    </tr>
+                    <tr>
+                        <td class="detail-label">회사명</td>
+                        <td class="detail-value">${employee.com_id || ''}</td>
+                        <td class="detail-label">직급</td>
+                        <td class="detail-value">${employee.emstd_id || ''}</td>
+                    </tr>
+                    <tr>
+                        <td class="detail-label">부서명</td>
+                        <td class="detail-value">${employee.dvp_id || ''}</td>
+                        <td class="detail-label" rowspan="3" style="text-align: center; vertical-align: middle;">사인</td>
+                        <td class="detail-value" rowspan="3" style="text-align: center; vertical-align: middle;">
+                            ${employee.signature ? 
+                                `<img 
+                                src="/static/images/signatures/${employee.signature || 'nosign.gif'}" 
+                                class="employee-signature" 
+                                alt="사인" 
+                                onerror="this.onerror=null; this.src='/static/images/common/nosign.gif';"
+                            />` :
+                                `<img src="/static/images/common/nosign.gif" class="employee-signature" alt="사인없음">`
+                            }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="detail-label">입사일</td>
+                        <td class="detail-value">${employee.date_start || ''}</td>
+                    </tr>
+                    <tr>
+                        <td class="detail-label">등록일</td>
+                        <td class="detail-value">${employee.date_reg || ''}</td>
+                    </tr>
+                    <tr>
+                        <td class="detail-label">상의 사이즈</td>
+                        <td class="detail-value">${employee.top_size || ''}</td>
+                        <td class="detail-label">퇴사일</td>
+                        <td class="detail-value">${employee.date_end || ''}</td>
+                    </tr>
+                    <tr>
+                        <td class="detail-label">하의 사이즈</td>
+                        <td class="detail-value">${employee.bottom_size || ''}</td>
+                        <td class="detail-label">수정일</td>
+                        <td class="detail-value">${employee.date_modi || ''}</td>
+                    </tr>
+                </table>
+            `;
+            
+            const tabContent = document.getElementById('tab-content');
+            if (tabContent) tabContent.innerHTML = html;
+        },
+        
+        // 직원 이력 로드
+        loadEmployeeHistory: function() {
+            fetch('/fm/em_entry', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ c_type: 'history', em_id: this.data.selectedEmployeeId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                let html = `
+                    <div style="margin-bottom: 15px;">
+                        <button class="btn btn-primary" onclick="EmployeeModule.addHistory()">이력 등록</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>번호</th><th>설명</th><th>파일</th><th>등록일</th></tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                if (data.success && data.data.length > 0) {
+                    data.data.forEach(item => {
+                        html += `
+                            <tr>
+                                <td>${item.auto_number || ''}</td>
+                                <td>${(item.filetype || '') + ' ' + (item.comments || '')}</td>
+                                <td>${item.filename || ''}</td>
+                                <td>${item.reg_date || ''}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    html += '<tr><td colspan="4" class="text-center">등록된 이력이 없습니다.</td></tr>';
+                }
+                
+                html += '</tbody></table>';
+                const tabContent = document.getElementById('tab-content');
+                if (tabContent) tabContent.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('직원 이력 로드 오류:', error);
+                const tabContent = document.getElementById('tab-content');
+                if (tabContent) tabContent.innerHTML = '<div class="tab-error">이력 정보를 불러올 수 없습니다.</div>';
+            });
+        },
+        
+        // 직원 자격증 로드
+        loadEmployeeLicense: function() {
+            fetch('/fm/em_entry', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ c_type: 'license', em_id: this.data.selectedEmployeeId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                let html = `
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>번호</th><th>직원ID</th><th>자격증명</th><th>취득일자</th><th>비고</th></tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                if (data.success && data.data.length > 0) {
+                    data.data.forEach(item => {
+                        html += `
+                            <tr>
+                                <td>${item.licenceem_id || ''}</td>
+                                <td>${item.em_id || ''}</td>
+                                <td>${item.licence_id || ''}</td>
+                                <td>${item.certici_date || ''}</td>
+                                <td>${item.description || ''}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    html += '<tr><td colspan="5" class="text-center">등록된 자격증이 없습니다.</td></tr>';
+                }
+                
+                html += '</tbody></table>';
+                const tabContent = document.getElementById('tab-content');
+                if (tabContent) tabContent.innerHTML = html;
+            })
+            .catch(error => {
+                console.error('직원 자격증 로드 오류:', error);
+                const tabContent = document.getElementById('tab-content');
+                if (tabContent) tabContent.innerHTML = '<div class="tab-error">자격증 정보를 불러올 수 없습니다.</div>';
+            });
+        },
+        
+        // 정렬
+        sortBy: function(field) {
+            if (this.data.currentSort.field === field) {
+                this.data.currentSort.direction = this.data.currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.data.currentSort.field = field;
+                this.data.currentSort.direction = 'asc';
+            }
+            
+            this.data.currentPage = 1;
+            this.searchEmployees();
+        },
+        
+        // 페이지 변경
+        changePage: function(pageNo) {
+            if (pageNo < 1 || pageNo > this.data.totalPages) return;
+            this.data.currentPage = pageNo;
+            this.searchEmployees();
+        },
+        
+        // 기타 기능들
+        insertEmployee: function() {
+            if (window.showStatus) {
+                window.showStatus('직원 등록 기능을 구현 중입니다.');
+            } else {
+                alert('직원 등록 기능을 구현 중입니다.');
+            }
+        },
+        
+        exportExcel: function() {
+            if (!this.data.searchParams.prop_id_chk) {
+                alert('사업소를 선택해주세요.');
+                return;
+            }
+            
+            const excelParams = new URLSearchParams({
+                prop_id_chk: this.data.searchParams.prop_id_chk,
+                emclass_id: this.data.searchParams.emclass_id,
+                emstd_id: this.data.searchParams.emstd_id,
+                status: this.data.searchParams.status,
+                name_sch: this.data.searchParams.name_sch
+            });
+            
+            const downloadUrl = `/fm/em_list_excel?${excelParams.toString()}`;
+            window.open(downloadUrl, '_blank');
+            
+            if (window.showStatus) {
+                window.showStatus('엑셀 파일을 다운로드합니다.');
+            }
+        },
+        
+        editEmployee: function(em_id) {
+            if (window.showStatus) {
+                window.showStatus(`직원 수정 기능을 구현 중입니다. 직원 ID: ${em_id}`);
+            } else {
+                alert(`직원 수정 기능을 구현 중입니다. 직원 ID: ${em_id}`);
+            }
+        },
+        
+        addHistory: function() {
+            if (window.showStatus) {
+                window.showStatus('이력 등록 기능을 구현 중입니다.');
+            } else {
+                alert('이력 등록 기능을 구현 중입니다.');
+            }
         }
-    }, 200);
+    };
     
-    // 5초 후 타임아웃
+    // 전역 함수들을 모듈로 연결 (기존 코드 호환성)
+    window.searchEmployees = function() { window.EmployeeModule.searchEmployees(); };
+    window.sortBy = function(field) { window.EmployeeModule.sortBy(field); };
+    window.changePage = function(pageNo) { window.EmployeeModule.changePage(pageNo); };
+    window.insertEmployee = function() { window.EmployeeModule.insertEmployee(); };
+    window.exportExcel = function() { window.EmployeeModule.exportExcel(); };
+    window.showTab = function(tabType, element) { window.EmployeeModule.showTab(tabType, element); };
+    
+    // 전역 초기화 함수 등록
+    window.initEmployeePage = function() {
+        window.EmployeeModule.init();
+    };
+    
+    // 🆕 HiddenFrame: 자동 초기화 (즉시 실행)
     setTimeout(() => {
-        clearInterval(checkUserInfo);
-        if (!isEmployeePageInitialized && (!window.currentEmId || !window.currentPropId)) {
-            console.error('📝 5초 대기 후에도 base.html 데이터를 받지 못함');
-            document.getElementById('employee-table-body').innerHTML = 
-                '<tr><td colspan="5" class="text-center text-danger">시스템 초기화 중 오류가 발생했습니다. 페이지를 새로고침해주세요.</td></tr>';
+        if (!window.EmployeeModule.data.isInitialized) {
+            console.log('📝 자동 초기화 시작 (HiddenFrame)');
+            window.EmployeeModule.init();
         }
-    }, 5000);
-});
-
-
-// 초기화 함수를 전역으로 노출 (탭에서 호출 가능)
-window.initEmployeePage = initEmployeePage;
-window.searchEmployees = searchEmployees;
-// 스크립트 로드 완료 확인
-console.log('📝 em_list.html 스크립트 로드 완료');
-console.log('📝 initEmployeePage 함수 존재:', typeof initEmployeePage);
-
-
-
+    }, 500);
+    
+    console.log('📝 EmployeeModule 로드 완료 (HiddenFrame)');
+    
+})(); // 즉시 실행 함수 끝
 </script>

@@ -1,0 +1,670 @@
+<!-- SPA 탭용 건물이력 상세편집 페이지 -->
+<link rel="stylesheet" href="/static/css/common.css">
+<style>
+    /* blpds_update 페이지 전용 스타일 */
+    #blpds_update_outer {
+        padding: 20px;
+        padding-bottom: 0;
+        overflow-y: auto;
+        background-color: #f8f9fa;
+        font-size: 12px;
+    }
+
+    #blpds_update_outer .button-area {
+        text-align: right;
+        margin-bottom: 15px;
+        padding: 15px;
+        background-color: white;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    #blpds_update_outer .button-area button {
+        margin-left: 5px;
+        padding: 6px 12px;
+        background: #fff;
+        color: #333;
+        border: 1px solid #ced4da;
+        font-size: 12px;
+        font-family: inherit;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.15s ease-in-out;
+    }
+
+    #blpds_update_outer .button-area button:hover {
+        background-color: #e9ecef;
+        border-color: #adb5bd;
+    }
+
+    #blpds_update_outer .button-area button.btn-primary {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+
+    #blpds_update_outer .button-area button.btn-primary:hover {
+        background: #0056b3;
+        border-color: #004085;
+    }
+
+    #blpds_update_outer .button-area button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    #blpds_update_outer .content-area {
+        background-color: white;
+        border-radius: 5px;
+        border: 1px solid #dee2e6;
+        min-height: 400px;
+    }
+
+    #blpds_update_outer .form-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+        font-size: 12px;
+    }
+
+    #blpds_update_outer .form-table td {
+        padding: 8px;
+        border: 1px solid #dee2e6;
+        vertical-align: middle;
+    }
+
+    #blpds_update_outer .form-table .label {
+        background-color: #f8f9fa;
+        font-weight: bold;
+        text-align: center;
+        width: 15%;
+        min-width: 80px;
+    }
+
+    #blpds_update_outer .form-table input,
+    #blpds_update_outer .form-table textarea {
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        padding: 4px 6px;
+        font-size: 12px;
+        width: 100%;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+
+    #blpds_update_outer .form-table input:focus,
+    #blpds_update_outer .form-table textarea:focus {
+        border-color: #007bff;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    #blpds_update_outer .form-table input:disabled {
+        background-color: #e9ecef;
+    }
+
+    #blpds_update_outer .image-container {
+        text-align: center;
+        height: 250px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #dee2e6;
+        background-color: #f8f9fa;
+    }
+
+    #blpds_update_outer .image-container img {
+        max-width: 400px;
+        max-height: 240px;
+        object-fit: contain;
+    }
+
+    #blpds_update_outer .no-image {
+        color: #6c757d;
+        font-style: italic;
+    }
+
+    #blpds_update_outer .file-info {
+        background-color: #e9ecef;
+        padding: 8px;
+        border-radius: 4px;
+        margin-top: 5px;
+    }
+
+    #blpds_update_outer .file-info a {
+        color: #007bff;
+        text-decoration: none;
+    }
+
+    #blpds_update_outer .file-info a:hover {
+        text-decoration: underline;
+    }
+
+    /* 반응형 */
+    @media (max-width: 768px) {
+        #blpds_update_outer {
+            padding: 10px;
+        }
+        
+        #blpds_update_outer .form-table .label {
+            width: 25%;
+        }
+        
+        #blpds_update_outer .image-container img {
+            max-width: 100%;
+        }
+    }
+</style>
+
+<div id="blpds_update_outer">
+    <!-- 상단 버튼 영역 -->
+    <div class="button-area">
+        <button type="button" id="btn_default_photo" onclick="BlpdsUpdateModule.setAsDefaultPhoto()">기본사진등록</button>
+        <button type="button" id="btn_save" class="btn-primary" onclick="BlpdsUpdateModule.saveData()">저장</button>
+        <button type="button" id="btn_delete" onclick="BlpdsUpdateModule.deleteData()">삭제</button>
+        <button type="button" id="btn_list" onclick="BlpdsUpdateModule.goToList()">목록보기</button>
+    </div>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <div class="content-area">
+        <table class="form-table">
+            <tr>
+                <td class="label">제목</td>
+                <td style="width: 35%;">
+                    <input type="text" id="title" name="title" placeholder="제목을 입력하세요">
+                </td>
+                <td class="label">형식</td>
+                <td style="width: 35%;">
+                    <input type="text" id="type_name" readonly>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">등록자</td>
+                <td colspan="3">
+                    <span id="reg_man_name"></span>
+                    <input type="hidden" id="reg_man" name="reg_man">
+                </td>
+            </tr>
+            <!-- 이미지 관리 (type=1) -->
+            <tr id="image_row_1" style="display: none;">
+                <td class="label" rowspan="2">이미지</td>
+                <td colspan="3">
+                    <div class="image-container" id="image_display">
+                        <div class="no-image">이미지 없음</div>
+                    </div>
+                </td>
+            </tr>
+            <tr id="image_row_2" style="display: none;">
+                <td colspan="3" style="text-align: right;">
+                    <input type="file" id="filename" name="filename" accept="image/*">
+                </td>
+            </tr>
+            <!-- 파일 관리 (type=3) -->
+            <tr id="file_row" style="display: none;">
+                <td class="label">파일 첨부</td>
+                <td colspan="3" style="text-align: right;">
+                    <input type="file" id="file_upload" name="file_upload">
+                    <div id="current_file_info" class="file-info" style="display: none;">
+                        <a href="#" id="current_file_link" target="_blank">현재 파일 다운로드</a>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label" style="vertical-align: top;">내용</td>
+                <td colspan="3">
+                    <textarea id="contents" name="contents" rows="10" placeholder="내용을 입력하세요"></textarea>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- 히든 필드들 -->
+    <input type="hidden" id="auto_number" value="">
+    <input type="hidden" id="bl_id" value="">
+    <input type="hidden" id="type_chk" value="">
+    <input type="hidden" id="prop_search" value="">
+    <input type="hidden" id="maskname" value="">
+    <input type="hidden" id="current_filename" value="">
+    <input type="hidden" id="has_permission" value="false">
+</div>
+
+<script>
+// 🛡️ 완전한 스코프 분리 - 변수 충돌 방지
+(function() {
+    'use strict';
+    
+    console.log('🏢 blpds_update.html 스크립트 시작!');
+    
+    // 네임스페이스 생성 - 중복 방지
+    if (typeof window.BlpdsUpdateModule !== 'undefined') {
+        console.log('🏢 기존 모듈 재사용');
+        return; // 이미 로드됨
+    }
+    
+    // 모듈 생성
+    window.BlpdsUpdateModule = {
+        // 데이터 저장소
+        data: {
+            autoNumber: null,
+            blId: null,
+            typeChk: null,
+            propSearch: null,
+            hasPermission: false,
+            isInitialized: false
+        },
+        
+        // 초기화
+        init: function(params) {
+            console.log('🏢 건물이력 상세편집 페이지 초기화 시작');
+            console.log('🏢 받은 파라미터:', params);
+            
+            if (this.data.isInitialized) {
+                console.log('🏢 이미 초기화됨, 데이터만 다시 로드');
+                // 새로운 파라미터로 다시 로드
+                if (params) {
+                    this.data.autoNumber = params.auto_number;
+                    this.data.blId = params.bl_id;
+                    this.data.typeChk = params.type || '2';
+                    this.data.propSearch = params.prop_search;
+                }
+                this.loadData();
+                return;
+            }
+            
+            // 파라미터가 없으면 전역 변수에서 가져오기
+            if (!params) {
+                params = {
+                    auto_number: window.selected_auto_number,
+                    bl_id: window.selected_bl_id,
+                    type: window.selected_file_type || '2',
+                    prop_search: window.currentPropId
+                };
+                console.log('🏢 전역 변수에서 파라미터 수집:', params);
+            }
+            
+            // 파라미터 유효성 검사
+            if (!params.auto_number) {
+                console.error('🏢 auto_number가 없습니다:', params);
+                alert('이력 정보가 없습니다. 다시 시도해주세요.');
+                return;
+            }
+            
+            // 파라미터 설정
+            this.data.autoNumber = params.auto_number;
+            this.data.blId = params.bl_id;
+            this.data.typeChk = params.type || '2';
+            this.data.propSearch = params.prop_search;
+            
+            // 히든 필드 설정
+            document.getElementById('auto_number').value = this.data.autoNumber || '';
+            document.getElementById('bl_id').value = this.data.blId || '';
+            document.getElementById('type_chk').value = this.data.typeChk;
+            document.getElementById('prop_search').value = this.data.propSearch || '';
+            
+            this.data.isInitialized = true;
+            
+            console.log('🏢 초기화된 데이터:', {
+                autoNumber: this.data.autoNumber,
+                blId: this.data.blId,
+                typeChk: this.data.typeChk,
+                propSearch: this.data.propSearch
+            });
+            
+            // UI 설정
+            this.setupUI();
+            
+            // 데이터 로드
+            this.loadData();
+        },
+        
+        // UI 설정
+        setupUI: function() {
+            const typeChk = this.data.typeChk;
+            const typeNameInput = document.getElementById('type_name');
+            
+            // 타입별 UI 표시/숨김
+            document.getElementById('image_row_1').style.display = typeChk === '1' ? 'table-row' : 'none';
+            document.getElementById('image_row_2').style.display = typeChk === '1' ? 'table-row' : 'none';
+            document.getElementById('file_row').style.display = typeChk === '3' ? 'table-row' : 'none';
+            
+            // 타입 이름 설정
+            let typeName = '';
+            if (typeChk === '1') typeName = '이미지관리';
+            else if (typeChk === '2') typeName = '이력관리';
+            else if (typeChk === '3') typeName = '파일관리';
+            
+            typeNameInput.value = typeName;
+            
+            // 기본사진등록 버튼은 이미지 타입일 때만 활성화
+            const defaultPhotoBtn = document.getElementById('btn_default_photo');
+            if (defaultPhotoBtn) {
+                defaultPhotoBtn.style.display = typeChk === '1' ? 'inline-block' : 'none';
+            }
+            
+            // 내용 textarea 높이 조정
+            const contentsTextarea = document.getElementById('contents');
+            if (typeChk === '2') {
+                contentsTextarea.rows = 15; // 이력관리는 더 크게
+            } else {
+                contentsTextarea.rows = 5;
+            }
+        },
+        
+        // 데이터 로드
+        loadData: function() {
+            if (!this.data.autoNumber) {
+                console.error('🏢 auto_number가 없습니다.');
+                return;
+            }
+            
+            console.log('🏢 데이터 로드 시작:', this.data.autoNumber);
+            
+            fetch('/fm/blpds_update/get_data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    auto_number: this.data.autoNumber,
+                    bl_id: this.data.blId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('🏢 서버 응답 데이터:', data);
+                
+                if (data.success) {
+                    this.data.hasPermission = data.has_permission;
+                    document.getElementById('has_permission').value = data.has_permission;
+                    
+                    this.populateForm(data.data);
+                    this.updatePermissionUI();
+                } else {
+                    this.showError('데이터를 불러올 수 없습니다: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('🏢 데이터 로드 오류:', error);
+                this.showError('데이터를 불러오는 중 오류가 발생했습니다.');
+            });
+        },
+        
+        // 폼에 데이터 채우기
+        populateForm: function(data) {
+            document.getElementById('title').value = data.title || '';
+            document.getElementById('contents').value = data.contents || '';
+            document.getElementById('reg_man').value = data.reg_man || '';
+            document.getElementById('reg_man_name').textContent = data.reg_man_name || '';
+            document.getElementById('maskname').value = data.maskname || '';
+            document.getElementById('current_filename').value = data.filename || '';
+            
+            // 이미지 표시 (type=1)
+            if (this.data.typeChk === '1') {
+                this.displayImage(data.maskname);
+            }
+            
+            // 파일 정보 표시 (type=3)
+            if (this.data.typeChk === '3' && data.filename) {
+                this.displayFileInfo(data.filename, this.data.autoNumber);
+            }
+        },
+        
+        // 이미지 표시
+        displayImage: function(maskname) {
+            const imageDisplay = document.getElementById('image_display');
+            
+            if (maskname) {
+                imageDisplay.innerHTML = `<img src="/fm/blpds_update/view_file?auto_number=${this.data.autoNumber}" alt="이미지">`;
+            } else {
+                imageDisplay.innerHTML = '<div class="no-image">이미지 없음</div>';
+            }
+        },
+        
+        // 파일 정보 표시
+        displayFileInfo: function(filename, autoNumber) {
+            const fileInfo = document.getElementById('current_file_info');
+            const fileLink = document.getElementById('current_file_link');
+            
+            if (filename) {
+                fileLink.textContent = filename;
+                fileLink.href = `/fm/blpds_update/download_file?auto_number=${autoNumber}`;
+                fileInfo.style.display = 'block';
+            } else {
+                fileInfo.style.display = 'none';
+            }
+        },
+        
+        // 권한 UI 업데이트
+        updatePermissionUI: function() {
+            const hasPermission = this.data.hasPermission;
+            
+            // 버튼 활성화/비활성화
+            document.getElementById('btn_save').disabled = !hasPermission;
+            document.getElementById('btn_delete').disabled = !hasPermission;
+            
+            const defaultPhotoBtn = document.getElementById('btn_default_photo');
+            if (defaultPhotoBtn) {
+                defaultPhotoBtn.disabled = !hasPermission || this.data.typeChk !== '1';
+            }
+            
+            // 입력 필드 읽기 전용 설정
+            if (!hasPermission) {
+                document.getElementById('title').readOnly = true;
+                document.getElementById('contents').readOnly = true;
+                document.getElementById('filename').disabled = true;
+                
+                const fileUpload = document.getElementById('file_upload');
+                if (fileUpload) fileUpload.disabled = true;
+                
+                this.showWarning('해당 사업장의 권한이 없습니다. 조회만 가능합니다.');
+            }
+        },
+        
+        // 데이터 저장
+        saveData: function() {
+            if (!this.data.hasPermission) {
+                alert('저장 권한이 없습니다.');
+                return;
+            }
+            
+            if (!this.validateForm()) {
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('auto_number', this.data.autoNumber);
+            formData.append('bl_id', this.data.blId);
+            formData.append('title', document.getElementById('title').value);
+            formData.append('contents', document.getElementById('contents').value);
+            formData.append('type', this.data.typeChk);
+            
+            // 파일 업로드 처리
+            if (this.data.typeChk === '1') {
+                const fileInput = document.getElementById('filename');
+                if (fileInput.files[0]) {
+                    formData.append('file', fileInput.files[0]);
+                }
+            } else if (this.data.typeChk === '3') {
+                const fileInput = document.getElementById('file_upload');
+                if (fileInput.files[0]) {
+                    formData.append('file', fileInput.files[0]);
+                }
+            }
+            
+            console.log('🏢 저장할 데이터:', Object.fromEntries(formData));
+            
+            // 저장 버튼 비활성화
+            const saveBtn = document.getElementById('btn_save');
+            const originalText = saveBtn.textContent;
+            saveBtn.textContent = '저장 중...';
+            saveBtn.disabled = true;
+            
+            fetch('/fm/blpds_update/save_data', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.showSuccess('저장이 완료되었습니다.');
+                    
+                    // 저장 후 데이터 새로고침
+                    setTimeout(() => {
+                        this.loadData();
+                    }, 1000);
+                } else {
+                    alert('저장 실패: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('🏢 저장 오류:', error);
+                alert('저장 중 오류가 발생했습니다.');
+            })
+            .finally(() => {
+                // 저장 버튼 복원
+                saveBtn.textContent = originalText;
+                saveBtn.disabled = !this.data.hasPermission;
+            });
+        },
+        
+        // 폼 유효성 검사
+        validateForm: function() {
+            const title = document.getElementById('title').value.trim();
+            
+            if (!title) {
+                alert('제목을 입력해주세요.');
+                document.getElementById('title').focus();
+                return false;
+            }
+            
+            return true;
+        },
+        
+        // 데이터 삭제
+        deleteData: function() {
+            if (!this.data.hasPermission) {
+                alert('삭제 권한이 없습니다.');
+                return;
+            }
+            
+            if (!confirm('정말로 삭제하시겠습니까?')) {
+                return;
+            }
+            
+            fetch('/fm/blpds_update/delete_data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    auto_number: this.data.autoNumber
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.showSuccess('삭제되었습니다.');
+                    
+                    // 삭제 후 목록으로 이동
+                    setTimeout(() => {
+                        this.goToList();
+                    }, 1000);
+                } else {
+                    alert('삭제 실패: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('🏢 삭제 오류:', error);
+                alert('삭제 중 오류가 발생했습니다.');
+            });
+        },
+        
+        // 기본사진으로 설정
+        setAsDefaultPhoto: function() {
+            if (!this.data.hasPermission || this.data.typeChk !== '1') {
+                alert('기본사진 설정 권한이 없습니다.');
+                return;
+            }
+            
+            const maskname = document.getElementById('maskname').value;
+            if (!maskname) {
+                alert('설정할 이미지가 없습니다.');
+                return;
+            }
+            
+            if (!confirm('이 이미지를 기본사진으로 설정하시겠습니까?')) {
+                return;
+            }
+            
+            fetch('/fm/blpds_update/set_default_photo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    bl_id: this.data.blId,
+                    maskname: maskname
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.showSuccess('기본사진으로 설정되었습니다.');
+                } else {
+                    alert('기본사진 설정 실패: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('🏢 기본사진 설정 오류:', error);
+                alert('기본사진 설정 중 오류가 발생했습니다.');
+            });
+        },
+        
+        // 목록으로 이동
+        goToList: function() {
+            // 건물수정 페이지의 이력 탭으로 돌아가기
+            window.selected_bl_id = this.data.blId;
+            
+            if (typeof window.loadContent === 'function') {
+                window.loadContent('/fm/bl_update.html', `건물수정(${this.data.blId})`);
+                
+                // 탭 전환 (이력 탭)
+                setTimeout(() => {
+                    if (window.BlUpdateModule && typeof window.BlUpdateModule.showTab === 'function') {
+                        window.BlUpdateModule.showTab(3);
+                    }
+                }, 500);
+                
+                window.showStatus && window.showStatus('건물수정 페이지로 돌아갑니다.');
+            } else {
+                console.error('🏢 loadContent 함수를 찾을 수 없습니다.');
+            }
+        },
+        
+        // 성공 메시지 표시
+        showSuccess: function(message) {
+            console.log('🏢 성공:', message);
+            if (window.showStatus) {
+                window.showStatus(message);
+            } else {
+                alert(message);
+            }
+        },
+        
+        // 경고 메시지 표시
+        showWarning: function(message) {
+            console.warn('🏢 경고:', message);
+            if (window.showStatus) {
+                window.showStatus(message);
+            }
+        },
+        
+        // 오류 표시
+        showError: function(message) {
+            console.error('🏢 오류:', message);
+            alert(message);
+        }
+    };
+    
+    // 전역 초기화 함수 등록
+    window.initBlpdsUpdatePage = function(params) {
+        window.BlpdsUpdateModule.init(params);
+    };
+    
+    console.log('🏢 BlpdsUpdateModule 로드 완료');
+    
+})(); // 즉시 실행 함수 끝
+</script>
