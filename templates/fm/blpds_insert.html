@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>건물이력 등록</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <style>
+        /* 팝업 전용 스타일 */
+        #blpds_insert_popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            display: none;
+        }
+
+        #blpds_insert_content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 800px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        #blpds_insert_header {
+            background-color: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #dee2e6;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        #blpds_insert_header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        #blpds_insert_close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #6c757d;
+            margin-left: auto;
+        }
+
+        #blpds_insert_body {
+            padding: 20px;
+        }
+
+        #blpds_insert_footer {
+            background-color: #f8f9fa;
+            padding: 15px 20px;
+            border-top: 1px solid #dee2e6;
+            border-radius: 0 0 8px 8px;
+            text-align: right;
+        }
+
+        .form-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 12px;
+        }
+
+        .form-table td {
+            padding: 8px;
+            border: 1px solid #dee2e6;
+            vertical-align: middle;
+        }
+
+        .form-table .label {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            text-align: center;
+            width: 15%;
+            min-width: 80px;
+        }
+
+        .form-table input,
+        .form-table select,
+        .form-table textarea {
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 4px 6px;
+            font-size: 12px;
+            width: 100%;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+        }
+
+        .form-table input:focus,
+        .form-table select:focus,
+        .form-table textarea:focus {
+            border-color: #007bff;
+            outline: 0;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        .popup-button {
+            margin-left: 5px;
+            padding: 6px 12px;
+            background: #fff;
+            color: #333;
+            border: 1px solid #ced4da;
+            font-size: 12px;
+            font-family: inherit;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+        }
+
+        .popup-button:hover {
+            background-color: #e9ecef;
+            border-color: #adb5bd;
+        }
+
+        .popup-button.btn-primary {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .popup-button.btn-primary:hover {
+            background: #0056b3;
+            border-color: #004085;
+        }
+
+        /* 반응형 */
+        @media (max-width: 768px) {
+            #blpds_insert_content {
+                width: 95%;
+                max-height: 95vh;
+            }
+            
+            .form-table .label {
+                width: 25%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 팝업 오버레이 -->
+    <div id="blpds_insert_popup">
+        <div id="blpds_insert_content">
+            <!-- 팝업 헤더 -->
+            <div id="blpds_insert_header">
+                <h3 id="popup_title">건물이력 등록</h3>
+                <button type="button" id="blpds_insert_close" onclick="BlpdsInsertPopup.close()">&times;</button>
+            </div>
+
+            <!-- 팝업 내용 -->
+            <div id="blpds_insert_body">
+                <form id="blpds_insert_form">
+                    <table class="form-table">
+                        <tr>
+                            <td class="label">제목</td>
+                            <td style="width: 35%;">
+                                <input type="text" id="insert_title" name="title" placeholder="제목을 입력하세요" required>
+                            </td>
+                            <td class="label">형식</td>
+                            <td style="width: 35%;">
+                                <select id="insert_type" name="type" onchange="BlpdsInsertPopup.changeType()">
+                                    <option value="1">이미지 이력</option>
+                                    <option value="2">텍스트 이력</option>
+                                    <option value="3">파일 이력</option>
+                                </select>
+                            </td>
+                        </tr>
+                        
+                        <!-- 이미지/파일 업로드 행 (type=1 또는 type=3일 때 표시) -->
+                        <tr id="file_row" style="display: table-row;">
+                            <td class="label">
+                                <span id="file_label">건물사진 첨부</span>
+                            </td>
+                            <td colspan="3" style="text-align: right;">
+                                <input type="file" id="insert_filename" name="filename" accept="image/*">
+                            </td>
+                        </tr>
+                        
+                        <!-- 내용 입력 -->
+                        <tr>
+                            <td class="label" style="vertical-align: top;">내용</td>
+                            <td colspan="3">
+                                <textarea id="insert_contents" name="contents" rows="5" placeholder="내용을 입력하세요"></textarea>
+                            </td>
+                        </tr>
+                    </table>
+
+                    <!-- 히든 필드들 -->
+                    <input type="hidden" id="insert_bl_id" name="bl_id" value="">
+                    <input type="hidden" id="insert_prop_id" name="prop_id" value="">
+                    <input type="hidden" id="insert_reg_man" name="reg_man" value="">
+                </form>
+            </div>
+
+            <!-- 팝업 푸터 -->
+            <div id="blpds_insert_footer">
+                <button type="button" class="popup-button btn-primary" onclick="BlpdsInsertPopup.save()">저장</button>
+                <button type="button" class="popup-button" onclick="BlpdsInsertPopup.close()">취소</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 건물이력 등록 팝업 모듈
+        window.BlpdsInsertPopup = {
+            data: {
+                currentType: '1', // 기본값: 이미지 이력
+                isOpen: false
+            },
+
+            // 팝업 열기
+            open: function(blId, propId, type = '2') {
+                console.log('🏢 이력 등록 팝업 열기:', { blId, propId, type });
+
+                // 데이터 설정
+                document.getElementById('insert_bl_id').value = blId || '';
+                document.getElementById('insert_prop_id').value = propId || '';
+                document.getElementById('insert_reg_man').value = window.currentEmId || '';
+
+                // 타입 설정 및 UI 업데이트
+                this.data.currentType = type;
+                document.getElementById('insert_type').value = type;
+                this.changeType();
+
+                // 팝업 제목 업데이트
+                let title = '건물이력 등록';
+                if (type === '1') title = '건물사진 등록';
+                else if (type === '2') title = '건물이력 등록';
+                else if (type === '3') title = '파일 등록';
+                document.getElementById('popup_title').textContent = title;
+
+                // 팝업 표시
+                document.getElementById('blpds_insert_popup').style.display = 'block';
+                this.data.isOpen = true;
+
+                // 제목 입력 필드에 포커스
+                setTimeout(() => {
+                    document.getElementById('insert_title').focus();
+                }, 100);
+            },
+
+            // 팝업 닫기
+            close: function() {
+                document.getElementById('blpds_insert_popup').style.display = 'none';
+                this.data.isOpen = false;
+                this.resetForm();
+            },
+
+            // 폼 초기화
+            resetForm: function() {
+                document.getElementById('blpds_insert_form').reset();
+                this.data.currentType = '1';
+                document.getElementById('insert_type').value = '1';
+                this.changeType();
+            },
+
+            // 타입 변경
+            changeType: function() {
+                const type = document.getElementById('insert_type').value;
+                this.data.currentType = type;
+
+                const fileRow = document.getElementById('file_row');
+                const fileLabel = document.getElementById('file_label');
+                const fileInput = document.getElementById('insert_filename');
+                const contentsTextarea = document.getElementById('insert_contents');
+
+                if (type === '1') {
+                    // 이미지 이력
+                    fileRow.style.display = 'table-row';
+                    fileLabel.textContent = '건물사진 첨부';
+                    fileInput.accept = 'image/*';
+                    contentsTextarea.rows = 5;
+                } else if (type === '2') {
+                    // 텍스트 이력
+                    fileRow.style.display = 'none';
+                    contentsTextarea.rows = 15;
+                } else if (type === '3') {
+                    // 파일 이력
+                    fileRow.style.display = 'table-row';
+                    fileLabel.textContent = '파일 첨부';
+                    fileInput.accept = '*/*';
+                    contentsTextarea.rows = 5;
+                }
+            },
+
+            // 저장
+            save: function() {
+                const title = document.getElementById('insert_title').value.trim();
+                const contents = document.getElementById('insert_contents').value.trim();
+                const blId = document.getElementById('insert_bl_id').value;
+                const type = this.data.currentType;
+
+                // 유효성 검사
+                if (!title) {
+                    alert('제목을 입력해주세요.');
+                    document.getElementById('insert_title').focus();
+                    return;
+                }
+
+                if (type === '2' && !contents) {
+                    alert('내용을 입력해주세요.');
+                    document.getElementById('insert_contents').focus();
+                    return;
+                }
+
+                // FormData 생성
+                const formData = new FormData();
+                formData.append('bl_id', blId);
+                formData.append('title', title);
+                formData.append('contents', contents);
+                formData.append('type', type);
+                formData.append('reg_man', document.getElementById('insert_reg_man').value);
+
+                // 파일 첨부 (type=1 또는 type=3인 경우)
+                if (type === '1' || type === '3') {
+                    const fileInput = document.getElementById('insert_filename');
+                    if (fileInput.files[0]) {
+                        formData.append('file', fileInput.files[0]);
+                    }
+                }
+
+                console.log('🏢 저장할 데이터:', Object.fromEntries(formData));
+
+                // 저장 요청
+                fetch('/fm/blpds_insert/save_data', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('저장이 완료되었습니다.');
+                        this.close();
+                        
+                        // 부모 페이지의 이력 데이터 새로고침
+                        if (window.BlUpdateModule && typeof window.BlUpdateModule.loadHistoryData === 'function') {
+                            window.BlUpdateModule.loadHistoryData();
+                        }
+                    } else {
+                        alert('저장 실패: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('🏢 저장 오류:', error);
+                    alert('저장 중 오류가 발생했습니다.');
+                });
+            }
+        };
+
+        // ESC 키로 팝업 닫기
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && BlpdsInsertPopup.data.isOpen) {
+                BlpdsInsertPopup.close();
+            }
+        });
+
+        // 오버레이 클릭으로 팝업 닫기
+        document.getElementById('blpds_insert_popup').addEventListener('click', function(event) {
+            if (event.target === this) {
+                BlpdsInsertPopup.close();
+            }
+        });
+
+        console.log('🏢 BlpdsInsertPopup 모듈 로드 완료');
+    </script>
+</body>
+</html>

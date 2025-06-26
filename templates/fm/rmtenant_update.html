@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>입주사 정보 수정</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <style>
+        /* rmtenant_update 스타일 - rm_update와 일관성 맞춤 */
+        #rmtenant_update_outer {
+            padding: 20px;
+            padding-bottom: 0;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            font-size: 12px;
+        }
+
+        /* 상단 버튼 영역 */
+        #rmtenant_update_outer .top-buttons {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+
+        #rmtenant_update_outer .top-buttons button {
+            height: 32px;
+            padding: 0 16px;
+            background: #fff;
+            color: #333;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+        }
+
+        #rmtenant_update_outer .top-buttons button:hover {
+            background-color: #e9ecef;
+            border-color: #adb5bd;
+        }
+
+        #rmtenant_update_outer .top-buttons button.btn-primary {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        #rmtenant_update_outer .top-buttons button.btn-primary:hover {
+            background: #0056b3;
+            border-color: #004085;
+        }
+
+        #rmtenant_update_outer .top-buttons button.btn-danger {
+            background: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+
+        #rmtenant_update_outer .top-buttons button.btn-danger:hover {
+            background: #c82333;
+            border-color: #bd2130;
+        }
+
+        /* 입주사 정보 영역 */
+        #rmtenant_update_outer .tenant-info-area {
+            background-color: white;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        #rmtenant_update_outer .tenant-info-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #rmtenant_update_outer .tenant-info-table td {
+            padding: 12px;
+            border: 1px solid #dee2e6;
+            font-size: 12px;
+            vertical-align: middle;
+        }
+
+        #rmtenant_update_outer .tenant-info-table .label-cell {
+            background-color: #f7f7f7;
+            text-align: center;
+            font-weight: bold;
+            width: 11%;
+            position: relative;
+        }
+
+        #rmtenant_update_outer .tenant-info-table .value-cell {
+            background-color: white;
+            text-align: left;
+            width: 22%;
+            padding-left: 15px;
+        }
+
+        #rmtenant_update_outer .tenant-info-table .full-width {
+            width: 85%;
+        }
+
+        #rmtenant_update_outer .tenant-info-table input[type="text"] {
+            height: 32px;
+            padding: 0 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        #rmtenant_update_outer .tenant-info-table input.large {
+            width: 300px;
+        }
+
+        #rmtenant_update_outer .tenant-info-table input.small {
+            width: 60px;
+            text-align: right;
+        }
+
+        #rmtenant_update_outer .tenant-info-table input.medium {
+            width: 100px;
+        }
+
+        #rmtenant_update_outer .tenant-info-table select {
+            width: 200px;
+            height: 32px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+
+        #rmtenant_update_outer .tenant-info-table textarea {
+            width: 100%;
+            min-height: 80px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 12px;
+            padding: 8px;
+            resize: vertical;
+        }
+
+        /* 필수 입력 표시 */
+        .required::after {
+            content: "*";
+            color: red;
+            margin-left: 2px;
+        }
+
+        /* 달력 입력 */
+        .date-input-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .date-input-group input[type="date"] {
+            width: 140px;
+        }
+
+        .date-input-group button {
+            height: 32px;
+            padding: 0 8px;
+            background: #fff;
+            color: #333;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .date-input-group button:hover {
+            background-color: #e9ecef;
+        }
+
+        /* 면적 입력 그룹 */
+        .area-input-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .area-input-group span {
+            font-size: 12px;
+            color: #495057;
+        }
+
+        /* 오류 메시지 */
+        .error-message {
+            color: #dc3545;
+            font-size: 11px;
+            margin-top: 5px;
+        }
+
+        /* 로딩 표시 */
+        #rmtenant_update_outer .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        #rmtenant_update_outer .loading .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 반응형 */
+        @media (max-width: 768px) {
+            #rmtenant_update_outer {
+                padding: 10px;
+            }
+            
+            #rmtenant_update_outer .tenant-info-table {
+                font-size: 11px;
+            }
+            
+            #rmtenant_update_outer .tenant-info-table td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="rmtenant_update_outer">
+        <!-- 상단 버튼 영역 -->
+        <div class="top-buttons">
+            <button type="button" id="btn_save" class="btn-primary">저장</button>
+            <button type="button" id="btn_delete" class="btn-danger">삭제</button>
+            <button type="button" id="btn_list">목록보기</button>
+        </div>
+
+        <!-- 입주사 정보 수정 영역 -->
+        <div class="tenant-info-area">
+            <table class="tenant-info-table">
+                <tr>
+                    <td class="label-cell required">입주사</td>
+                    <td class="value-cell">
+                        <input type="text" id="tenant_name" name="tenant_name" class="large">
+                    </td>
+                    <td class="label-cell required">건물</td>
+                    <td class="value-cell">
+                        <select id="bl_id" name="bl_id">
+                            <option value="">건물선택</option>
+                        </select>
+                    </td>
+                    <td class="label-cell">전용면적</td>
+                    <td class="value-cell">
+                        <div class="area-input-group">
+                            <input type="text" id="area_rm" name="area_rm" class="small">
+                            <span>평</span>
+                            <input type="text" id="area_rm_local" name="area_rm_local" class="small">
+                            <span>㎡</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label-cell">입실일자</td>
+                    <td class="value-cell">
+                        <div class="date-input-group">
+                            <input type="date" id="move_in" name="move_in">
+                            <button type="button" onclick="RmtenantUpdateModule.clearDate('move_in')">취소</button>
+                        </div>
+                    </td>
+                    <td class="label-cell required">층</td>
+                    <td class="value-cell">
+                        <select id="fl_id" name="fl_id">
+                            <option value="">층선택</option>
+                        </select>
+                    </td>
+                    <td class="label-cell">계약면적</td>
+                    <td class="value-cell">
+                        <div class="area-input-group">
+                            <input type="text" id="area_contract" name="area_contract" class="small">
+                            <span>평</span>
+                            <input type="text" id="area_contract_local" name="area_contract_local" class="small">
+                            <span>㎡</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label-cell">퇴실일자</td>
+                    <td class="value-cell">
+                        <div class="date-input-group">
+                            <input type="date" id="move_out" name="move_out">
+                            <button type="button" onclick="RmtenantUpdateModule.clearDate('move_out')">취소</button>
+                        </div>
+                    </td>
+                    <td class="label-cell">실</td>
+                    <td class="value-cell">
+                        <select id="rm_id" name="rm_id">
+                            <option value="">실선택</option>
+                        </select>
+                    </td>
+                    <td class="label-cell">임대면적(평)</td>
+                    <td class="value-cell">
+                        <div class="area-input-group">
+                            <input type="text" id="area_lease" name="area_lease" class="small">
+                            <span>평</span>
+                            <input type="text" id="area_lease_local" name="area_lease_local" class="small">
+                            <span>㎡</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label-cell">비고</td>
+                    <td class="value-cell full-width" colspan="5">
+                        <textarea id="comments" name="comments" placeholder="비고사항을 입력해주세요"></textarea>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <script>
+    // 🛡️ 완전한 스코프 분리
+    (function() {
+        'use strict';
+        
+        console.log('🏗️ rmtenant_update.html 스크립트 시작!');
+        
+        // 🔥 기존 RmtenantUpdateModule 완전 제거 후 재생성
+        if (typeof window.RmtenantUpdateModule !== 'undefined') {
+            console.log('🏗️ 기존 RmtenantUpdateModule 완전 제거');
+            if (window.RmtenantUpdateModule.cleanup && typeof window.RmtenantUpdateModule.cleanup === 'function') {
+                window.RmtenantUpdateModule.cleanup();
+            }
+            delete window.RmtenantUpdateModule;
+        }
+        
+        // 모듈 생성
+        window.RmtenantUpdateModule = {
+            // 데이터 저장소
+            data: {
+                rmtenantId: null,
+                blList: [],
+                flList: [],
+                rmList: [],
+                tenantData: {},
+                isInitialized: false,
+                moduleId: 'rmtenant_update_' + Date.now()
+            },
+            
+            // 🔧 안전한 DOM 접근 헬퍼
+            safeGetElement: function(id) {
+                try {
+                    const element = document.getElementById(id);
+                    if (!element) {
+                        console.warn('🏗️ [RU] DOM 요소를 찾을 수 없음:', id);
+                    }
+                    return element;
+                } catch (error) {
+                    console.error('🏗️ [RU] DOM 접근 오류:', error);
+                    return null;
+                }
+            },
+
+            // 초기화
+            init: function() {
+                console.log('🏗️ [RU] 입주사 수정 페이지 초기화 시작');
+                
+                const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                const prop_id = window.currentPropId;
+                
+                // 전역 변수에서 rmtenant_id 가져오기
+                this.data.rmtenantId = window.selected_rmtenant_id || null;
+                
+                // URL 파라미터도 백업으로 시도
+                if (!this.data.rmtenantId) {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const rawRmtenantId = urlParams.get('rmtenant_id');
+                    this.data.rmtenantId = rawRmtenantId ? parseInt(parseFloat(rawRmtenantId)) : null;
+                }
+                
+                console.log('🏗️ [RU] 받은 데이터:', { 
+                    em_id, 
+                    prop_id, 
+                    rmtenant_id: this.data.rmtenantId, 
+                    from_global: window.selected_rmtenant_id,
+                    isReactivation: this.data.isInitialized  // 재활성화 감지
+                });
+                
+                if (!em_id) {
+                    console.error('🏗️ [RU] em_id가 없습니다.');
+                    this.showError('사용자 정보를 불러올 수 없습니다.');
+                    return;
+                }
+                
+                if (!this.data.rmtenantId) {
+                    console.error('🏗️ [RU] rmtenant_id가 없습니다.');
+                    this.showError('입주사 ID가 누락되었습니다.');
+                    return;
+                }
+                
+                // 이미 초기화된 상태에서 다른 ID로 재호출되면 데이터만 새로 로드
+                if (this.data.isInitialized) {
+                    console.log('🔄 [RU] 기존 탭 재활성화 - 새 데이터 로드');
+                    this.loadTenantData();  // 새로운 ID로 데이터만 다시 로드
+                    delete window.selected_rmtenant_id;  // 사용 후 정리
+                    return;
+                }
+                
+                
+                // 사용 후 전역 변수 정리
+                delete window.selected_rmtenant_id;
+                
+                this.data.isInitialized = true;
+                
+                // 이벤트 리스너 등록
+                this.bindEvents();
+                
+                // 건물 목록 로드
+                this.loadBuildingList();
+                
+                // 입주사 정보 로드
+                this.loadTenantData();
+            },
+            
+            // 이벤트 리스너 등록
+            bindEvents: function() {
+                // 저장 버튼
+                const btnSave = this.safeGetElement('btn_save');
+                if (btnSave) {
+                    btnSave.onclick = () => {
+                        this.saveTenant();
+                    };
+                }
+                
+                // 삭제 버튼
+                const btnDelete = this.safeGetElement('btn_delete');
+                if (btnDelete) {
+                    btnDelete.onclick = () => {
+                        this.deleteTenant();
+                    };
+                }
+                
+                // 목록보기 버튼
+                const btnList = this.safeGetElement('btn_list');
+                if (btnList) {
+                    btnList.onclick = () => {
+                        this.goToList();
+                    };
+                }
+                
+                // 건물 선택 변경
+                const blSelect = this.safeGetElement('bl_id');
+                if (blSelect) {
+                    blSelect.onchange = () => {
+                        this.loadFloorList(blSelect.value);
+                        this.clearRoomList(); // 실 목록 초기화
+                    };
+                }
+                
+                // 층 선택 변경
+                const flSelect = this.safeGetElement('fl_id');
+                if (flSelect) {
+                    flSelect.onchange = () => {
+                        this.loadRoomList(flSelect.value);
+                    };
+                }
+                
+                console.log('🏗️ [RU] 이벤트 리스너 등록 완료');
+            },
+            
+            // 입주사 정보 로드
+            loadTenantData: function() {
+                const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                
+                if (!em_id || !this.data.rmtenantId) {
+                    console.error('🏗️ [RU] 필수 파라미터 누락');
+                    return;
+                }
+                
+                fetch('fm/rmtenant_update/get_tenant_data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        em_id: em_id,
+                        rmtenant_id: this.data.rmtenantId
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🏗️ [RU] 입주사 정보 응답:', data);
+                    if (data && data.success) {
+                        this.data.tenantData = data.data;
+                        this.populateForm(data.data);
+                        
+                        // 건물/층/실 연동 로드
+                        if (data.data.bl_id) {
+                            this.loadFloorList(data.data.bl_id, data.data.fl_id);
+                        }
+                        if (data.data.fl_id) {
+                            this.loadRoomList(data.data.fl_id, data.data.rm_id);
+                        }
+                    } else {
+                        console.error('🏗️ [RU] 입주사 정보 로드 실패:', data ? data.message : 'Unknown error');
+                        this.showError('입주사 정보를 불러올 수 없습니다.');
+                    }
+                })
+                .catch(error => {
+                    console.error('🏗️ [RU] 입주사 정보 로드 오류:', error);
+                    this.showError(`입주사 정보를 불러오는 중 오류가 발생했습니다: ${error.message}`);
+                });
+            },
+            
+            // 폼에 데이터 채우기
+            populateForm: function(data) {
+                this.safeSetValue('tenant_name', data.tenant_name);
+                this.safeSetValue('bl_id', data.bl_id);
+                this.safeSetValue('fl_id', data.fl_id);
+                this.safeSetValue('rm_id', data.rm_id);
+                this.safeSetValue('move_in', data.move_in);
+                this.safeSetValue('move_out', data.move_out);
+                this.safeSetValue('area_rm', data.area_rm);
+                this.safeSetValue('area_rm_local', data.area_rm_local);
+                this.safeSetValue('area_contract', data.area_contract);
+                this.safeSetValue('area_contract_local', data.area_contract_local);
+                this.safeSetValue('area_lease', data.area_lease);
+                this.safeSetValue('area_lease_local', data.area_lease_local);
+                this.safeSetValue('comments', data.comments);
+                
+                console.log('🏗️ [RU] 폼 데이터 채우기 완료');
+            },
+            
+            // 안전한 값 설정
+            safeSetValue: function(id, value) {
+                const element = this.safeGetElement(id);
+                if (element && value != null) {
+                    element.value = value;
+                }
+            },
+            
+            // 건물 목록 로드
+            loadBuildingList: function() {
+                const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                const prop_id = window.currentPropId;
+                
+                if (!em_id || !prop_id) {
+                    console.error('🏗️ [RU] 건물 목록 로드 파라미터 누락');
+                    return;
+                }
+                
+                fetch('fm/rmtenant_list/get_bl_list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ em_id: em_id, prop_id: prop_id })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🏗️ [RU] 건물 목록 응답:', data);
+                    if (data && data.success) {
+                        this.data.blList = data.data || [];
+                        this.renderBuildingSelect(data.data || []);
+                    } else {
+                        console.error('🏗️ [RU] 건물 목록 로드 실패:', data ? data.message : 'Unknown error');
+                        this.renderBuildingSelect([]);
+                    }
+                })
+                .catch(error => {
+                    console.error('🏗️ [RU] 건물 목록 로드 오류:', error);
+                    this.renderBuildingSelect([]);
+                });
+            },
+            
+            // 건물 선택 옵션 렌더링
+            renderBuildingSelect: function(buildings) {
+                const select = this.safeGetElement('bl_id');
+                if (!select) return;
+                select.innerHTML = '<option value="">건물선택</option>';
+                
+                buildings.forEach(building => {
+                    const option = document.createElement('option');
+                    option.value = building.bl_id;
+                    option.textContent = `${building.bl_name} (${building.bl_id})`;
+                    select.appendChild(option);
+                });
+                
+                // 기존 선택값 복원
+                if (this.data.tenantData && this.data.tenantData.bl_id) {
+                    select.value = this.data.tenantData.bl_id;
+                }
+            },
+            
+            // 층 목록 로드
+            loadFloorList: function(blId, selectedFlId = null) {
+                const prop_id = window.currentPropId;
+                const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                
+                const flSelect = this.safeGetElement('fl_id');
+                if (!flSelect) return;
+                flSelect.innerHTML = '<option value="">층선택</option>';
+                this.data.flList = [];
+
+                if (!prop_id || !blId) {
+                    console.warn('🏗️ [RU] 층 목록 로드 파라미터 부족:', { prop_id, blId });
+                    return;
+                }
+
+                fetch('fm/rmtenant_list/get_fl_list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prop_id: prop_id, em_id: em_id, bl_id: blId })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🏗️ [RU] 층 목록 응답:', data);
+                    if (data && data.success) {
+                        this.data.flList = data.data || [];
+                        this.renderFloorSelect(data.data || [], selectedFlId);
+                    } else {
+                        console.error('🏗️ [RU] 층 목록 로드 실패:', data ? data.message : 'Unknown error');
+                        this.renderFloorSelect([], selectedFlId);
+                    }
+                })
+                .catch(error => {
+                    console.error('🏗️ [RU] 층 목록 로드 오류:', error);
+                    this.renderFloorSelect([], selectedFlId);
+                });
+            },
+            
+            // 층 선택 옵션 렌더링
+            renderFloorSelect: function(floors, selectedFlId = null) {
+                const select = this.safeGetElement('fl_id');
+                if (!select) return;
+                select.innerHTML = '<option value="">층선택</option>';
+                
+                floors.forEach(floor => {
+                    const option = document.createElement('option');
+                    option.value = floor.fl_id;
+                    option.textContent = `${floor.fl_name} (${floor.fl_id})`;
+                    select.appendChild(option);
+                });
+                
+                // 선택값 설정
+                if (selectedFlId) {
+                    select.value = selectedFlId;
+                }
+            },
+
+            // 실 목록 로드
+            loadRoomList: function(flId, selectedRmId = null) {
+                const prop_id = window.currentPropId;
+                const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                const blId = this.safeGetElement('bl_id').value;
+                
+                const rmSelect = this.safeGetElement('rm_id');
+                if (!rmSelect) return;
+                rmSelect.innerHTML = '<option value="">실선택</option>';
+                this.data.rmList = [];
+
+                if (!prop_id || !blId || !flId) {
+                    console.warn('🏗️ [RU] 실 목록 로드 파라미터 부족:', { prop_id, blId, flId });
+                    return;
+                }
+
+                fetch('fm/rmtenant_list/get_rm_list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prop_id: prop_id, em_id: em_id, bl_id: blId, fl_id: flId })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🏗️ [RU] 실 목록 응답:', data);
+                    if (data && data.success) {
+                        this.data.rmList = data.data || [];
+                        this.renderRoomSelect(data.data || [], selectedRmId);
+                    } else {
+                        console.error('🏗️ [RU] 실 목록 로드 실패:', data ? data.message : 'Unknown error');
+                        this.renderRoomSelect([], selectedRmId);
+                    }
+                })
+                .catch(error => {
+                    console.error('🏗️ [RU] 실 목록 로드 오류:', error);
+                    this.renderRoomSelect([], selectedRmId);
+                });
+            },
+
+            // 실 선택 옵션 렌더링
+            renderRoomSelect: function(rooms, selectedRmId = null) {
+                const select = this.safeGetElement('rm_id');
+                if (!select) return;
+                select.innerHTML = '<option value="">실선택</option>';
+                
+                rooms.forEach(room => {
+                    const option = document.createElement('option');
+                    option.value = room.rm_id;
+                    option.textContent = `${room.rm_name} (${room.rm_id})`;
+                    select.appendChild(option);
+                });
+                
+                // 선택값 설정
+                if (selectedRmId) {
+                    select.value = selectedRmId;
+                }
+            },
+            
+            // 실 목록 초기화
+            clearRoomList: function() {
+                const rmSelect = this.safeGetElement('rm_id');
+                if (rmSelect) {
+                    rmSelect.innerHTML = '<option value="">실선택</option>';
+                }
+                this.data.rmList = [];
+            },
+            
+            // 날짜 클리어
+            clearDate: function(fieldId) {
+                const element = this.safeGetElement(fieldId);
+                if (element) {
+                    element.value = '';
+                }
+            },
+            
+            // 입주사 정보 저장
+            saveTenant: function() {
+                // 유효성 검사
+                const tenantName = this.safeGetElement('tenant_name').value.trim();
+                const blId = this.safeGetElement('bl_id').value;
+                const flId = this.safeGetElement('fl_id').value;
+                
+                if (!tenantName) {
+                    alert('입주사명을 입력해주세요.');
+                    this.safeGetElement('tenant_name').focus();
+                    return;
+                }
+                if (!blId) {
+                    alert('건물을 선택해주세요.');
+                    this.safeGetElement('bl_id').focus();
+                    return;
+                }
+                if (!flId) {
+                    alert('층을 선택해주세요.');
+                    this.safeGetElement('fl_id').focus();
+                    return;
+                }
+                
+                if (!confirm('수정하시겠습니까?')) {
+                    return;
+                }
+                
+                const requestData = {
+                    em_id: window.currentEmId || (window.userInfo && window.userInfo.em_id),
+                    rmtenant_id: this.data.rmtenantId,
+                    tenant_name: tenantName,
+                    bl_id: blId,
+                    fl_id: flId,
+                    rm_id: this.safeGetElement('rm_id').value,
+                    move_in: this.safeGetElement('move_in').value,
+                    move_out: this.safeGetElement('move_out').value,
+                    area_rm: this.safeGetElement('area_rm').value,
+                    area_rm_local: this.safeGetElement('area_rm_local').value,
+                    area_contract: this.safeGetElement('area_contract').value,
+                    area_contract_local: this.safeGetElement('area_contract_local').value,
+                    area_lease: this.safeGetElement('area_lease').value,
+                    area_lease_local: this.safeGetElement('area_lease_local').value,
+                    comments: this.safeGetElement('comments').value
+                };
+                
+                console.log('🏗️ [RU] 입주사 저장 요청:', requestData);
+                
+                fetch('fm/rmtenant_update/save_tenant', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🏗️ [RU] 입주사 저장 응답:', data);
+                    if (data && data.success) {
+                        alert('저장되었습니다.');
+
+                        const myTabId = window.tabManager.activeTabId || null; // 현재 수정탭 ID
+
+                        if (window.tabManager && window.tabManager.tabs) {
+                            let listTabId = null;
+
+                            if (window.tabManager.tabs instanceof Map) {
+                                for (const [tabId, tab] of window.tabManager.tabs.entries()) {
+                                    if (tabId.includes('rmtenant_list') || 
+                                        (tab.url && tab.url.includes('rmtenant_list.html')) || 
+                                        (tab.title && tab.title === '입주사 정보')) {
+                                        listTabId = tabId;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            if (listTabId && typeof window.tabManager.switchToTab === 'function') {
+                                window.tabManager.switchToTab(listTabId);
+
+                                setTimeout(() => {
+                                    if (window.RmtenantListModule && typeof window.RmtenantListModule.refreshData === 'function') {
+                                        window.RmtenantListModule.refreshData();
+                                    }
+                                }, 200);
+                            } else if (typeof window.tabManager.addTab === 'function') {
+                                window.tabManager.addTab('fm/rmtenant_list.html', '입주사 정보');
+                            }
+
+                            setTimeout(() => {
+                                if (typeof window.tabManager.removeTab === 'function' && myTabId) {
+                                    window.tabManager.removeTab(myTabId);
+                                }
+                            }, 300);
+
+                        } else {
+                            window.location.href = 'fm/rmtenant_list.html';
+                        }
+
+                    } else {
+                        alert(`저장 실패: ${data ? data.message : 'Unknown error'}`);
+                    }
+                })
+
+                .catch(error => {
+                    console.error('🏗️ [RU] 입주사 저장 오류:', error);
+                    alert(`저장 중 오류가 발생했습니다: ${error.message}`);
+                });
+            },
+            
+            // 입주사 정보 삭제
+            deleteTenant: function() {
+                if (!confirm('삭제하시겠습니까?')) {
+                    return;
+                }
+                
+                const requestData = {
+                    em_id: window.currentEmId || (window.userInfo && window.userInfo.em_id),
+                    rmtenant_id: this.data.rmtenantId
+                };
+                
+                console.log('🏗️ [RU] 입주사 삭제 요청:', requestData);
+                
+                fetch('fm/rmtenant_update/delete_tenant', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🏗️ [RU] 입주사 삭제 응답:', data);
+                    if (data && data.success) {
+                        alert('삭제되었습니다.');
+                        this.goToList();
+                    } else {
+                        alert(`삭제 실패: ${data ? data.message : 'Unknown error'}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('🏗️ [RU] 입주사 삭제 오류:', error);
+                    alert(`삭제 중 오류가 발생했습니다: ${error.message}`);
+                });
+            },
+            
+            // 목록으로 이동
+            goToList: function() {
+                try {
+                    // tabManager가 있는 경우
+                    if (window.tabManager && window.tabManager.tabs) {
+                        let rmtenantListTabId = null;
+                        
+                        // tabs가 Map 객체인 경우
+                        if (window.tabManager.tabs instanceof Map) {
+                            for (const [tabId, tab] of window.tabManager.tabs.entries()) {
+                                if (tabId.includes('rmtenant_list') || 
+                                    (tab.url && tab.url.includes('rmtenant_list.html')) ||
+                                    (tab.title && tab.title === '입주사 정보')) {
+                                    rmtenantListTabId = tabId;
+                                    console.log('🟢 [RU] 기존 rmtenant_list 탭 발견:', rmtenantListTabId);
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // 기존 탭이 있으면 활성화
+                        if (rmtenantListTabId && typeof window.tabManager.switchToTab === 'function') {
+                            window.tabManager.switchToTab(rmtenantListTabId);
+                            
+                            // 현재 rmtenant_update 탭 닫기
+                            setTimeout(() => {
+                                if (typeof window.tabManager.removeCurrentTab === 'function') {
+                                    window.tabManager.removeCurrentTab();
+                                }
+                            }, 100);
+                            
+                            // 데이터 새로고침
+                            setTimeout(() => {
+                                if (window.RmtenantListModule && typeof window.RmtenantListModule.refreshData === 'function') {
+                                    window.RmtenantListModule.refreshData();
+                                }
+                            }, 300);
+                            
+                            console.log('🟢 [RU] 기존 rmtenant_list 탭으로 이동 완료');
+                            return;
+                        }
+                        
+                        // 기존 탭이 없으면 새로 생성
+                        if (typeof window.tabManager.addTab === 'function') {
+                            window.tabManager.addTab('fm/rmtenant_list.html', '입주사 정보');
+                            
+                            // 현재 rmtenant_update 탭 닫기
+                            setTimeout(() => {
+                                if (typeof window.tabManager.removeCurrentTab === 'function') {
+                                    window.tabManager.removeCurrentTab();
+                                }
+                            }, 200);
+                            
+                            return;
+                        }
+                    }
+                    
+                    // fallback
+                    if (typeof window.loadContent === 'function') {
+                        window.loadContent('fm/rmtenant_list.html', '입주사 정보');
+                    } else {
+                        window.location.href = 'fm/rmtenant_list.html';
+                    }
+                    
+                } catch (error) {
+                    console.error('🔴 [RU] 목록 이동 중 오류:', error);
+                    
+                    // 오류 발생 시 강제로 새 탭 생성
+                    if (window.tabManager && typeof window.tabManager.addTab === 'function') {
+                        window.tabManager.addTab('fm/rmtenant_list.html', '입주사 정보');
+                    } else {
+                        window.location.href = 'fm/rmtenant_list.html';
+                    }
+                }
+            },
+            
+            // 오류 표시
+            showError: function(message) {
+                console.error('🔴 [RU] 입주사 수정 오류:', message);
+                alert(message);
+            },
+            
+            // 정리 함수
+            cleanup: function() {
+                console.log('🏗️ [RU] RmtenantUpdateModule 정리 중...');
+                this.data.isInitialized = false;
+            }
+        };
+        
+        // 전역 초기화 함수 등록
+        window.initializeRmtenantUpdate = function() {
+            window.RmtenantUpdateModule.init();
+        };
+        
+        // 자동 초기화 (즉시 실행)
+        setTimeout(() => {
+            console.log('🏗️ [RU] RmtenantUpdate 자동 초기화 시작');
+            window.RmtenantUpdateModule.init();
+        }, 100);
+
+        // 🔥 탭 활성화 감지 이벤트 리스너 추가
+        window.addEventListener('focus', function() {
+            // 탭이 다시 포커스될 때마다 새 데이터가 있는지 확인
+            if (window.selected_rmtenant_id && window.RmtenantUpdateModule) {
+                console.log('🔄 [RU] 탭 포커스 감지 - 새 데이터 체크:', window.selected_rmtenant_id);
+                
+                // 현재 로드된 ID와 다르면 새로 로드
+                if (window.RmtenantUpdateModule.data.rmtenantId !== window.selected_rmtenant_id) {
+                    console.log('🔄 [RU] 다른 ID 감지 - 데이터 새로 로드');
+                    window.RmtenantUpdateModule.data.rmtenantId = window.selected_rmtenant_id;
+                    window.RmtenantUpdateModule.loadTenantData();
+                    delete window.selected_rmtenant_id;
+                }
+            }
+        });
+
+        
+        console.log('🏗️ [RU] RmtenantUpdateModule 로드 완료');
+        
+    })(); // 즉시 실행 함수 끝
+    </script>
+</body>
+</html>

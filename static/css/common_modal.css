@@ -1,0 +1,321 @@
+/* 공통 모달 스타일 - 재사용 가능한 모달 컴포넌트 */
+
+/* 모달 오버레이 */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    display: block;
+}
+
+/* 모달 컨텐츠 컨테이너 */
+.modal-content {
+    position: absolute;
+    top: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    min-width: 600px;
+    max-width: 95%;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    max-height: 80vh;
+    overflow: hidden;
+    resize: both;
+    border: 2px solid #007bff;
+}
+
+/* 모달 헤더 (드래그 핸들) */
+.modal-header {
+    background-color: #f8f9fa;
+    padding: 15px 20px;
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 6px 6px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: move;
+    user-select: none;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: bold;
+    color: #495057;
+}
+
+.modal-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.modal-control-btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: #6c757d;
+    padding: 2px 6px;
+    transition: color 0.15s ease;
+}
+
+.modal-control-btn:hover {
+    color: #495057;
+}
+
+.modal-control-btn.close {
+    font-size: 20px;
+}
+
+/* 모달 본문 */
+.modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    max-height: calc(80vh - 120px);
+}
+
+/* 모달 푸터 */
+.modal-footer {
+    background-color: #f8f9fa;
+    padding: 15px 20px;
+    border-top: 1px solid #dee2e6;
+    border-radius: 0 0 6px 6px;
+    text-align: right;
+}
+
+/* 모달 폼 테이블 */
+.modal-form-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    font-size: 12px;
+}
+
+.modal-form-table td {
+    padding: 8px;
+    border: 1px solid #dee2e6;
+    vertical-align: middle;
+}
+
+.modal-form-table .label-cell {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    text-align: center;
+    width: 15%;
+    min-width: 80px;
+}
+
+.modal-form-table .value-cell {
+    background-color: white;
+    text-align: left;
+    padding-left: 15px;
+}
+
+.modal-form-table input,
+.modal-form-table select,
+.modal-form-table textarea {
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 12px;
+    width: 100%;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.modal-form-table input:focus,
+.modal-form-table select:focus,
+.modal-form-table textarea:focus {
+    border-color: #007bff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.modal-form-table input[readonly] {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+}
+
+/* 모달 버튼 */
+.modal-btn {
+    margin-left: 5px;
+    padding: 6px 12px;
+    border: 1px solid #ced4da;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.modal-btn-primary {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.modal-btn-primary:hover {
+    background: #0056b3;
+    border-color: #004085;
+}
+
+.modal-btn-danger {
+    background: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+
+.modal-btn-danger:hover {
+    background: #c82333;
+    border-color: #bd2130;
+}
+
+.modal-btn-secondary {
+    background: #fff;
+    color: #333;
+    border-color: #ced4da;
+}
+
+.modal-btn-secondary:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+/* 리사이즈 핸들 */
+.modal-resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    cursor: se-resize;
+    background: linear-gradient(-45deg, transparent 40%, #ccc 40%, #ccc 60%, transparent 60%);
+    border-radius: 0 0 6px 0;
+}
+
+/* 날짜 입력 필드 스타일 */
+.modal-date-input {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.modal-date-input input {
+    flex: 1;
+}
+
+.modal-date-picker-btn {
+    background: none;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #495057;
+    transition: all 0.15s ease;
+}
+
+.modal-date-picker-btn:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+/* 에러/성공 메시지 */
+.modal-message {
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    font-size: 12px;
+}
+
+.modal-message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.modal-message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.modal-message.warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+/* 필수 입력 표시 */
+.modal-required::after {
+    content: "*";
+    color: red;
+    margin-left: 2px;
+}
+
+/* 최대화 상태 */
+.modal-content.maximized {
+    width: 95vw !important;
+    height: 90vh !important;
+    left: 2.5vw !important;
+    top: 5vh !important;
+    transform: none !important;
+}
+
+.modal-content.maximized .modal-resize-handle {
+    display: none;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        min-width: 320px;
+        left: 50%;
+        top: 5%;
+    }
+    
+    .modal-header {
+        padding: 10px 15px;
+    }
+    
+    .modal-body {
+        padding: 15px;
+    }
+    
+    .modal-footer {
+        padding: 10px 15px;
+    }
+    
+    .modal-form-table .label-cell {
+        width: 30%;
+        font-size: 11px;
+    }
+    
+    .modal-form-table input,
+    .modal-form-table select,
+    .modal-form-table textarea {
+        font-size: 11px;
+    }
+}
+
+/* 스피너 애니메이션 */
+.modal-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #007bff;
+    border-radius: 50%;
+    animation: modal-spin 1s linear infinite;
+    margin-right: 10px;
+}
+
+@keyframes modal-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

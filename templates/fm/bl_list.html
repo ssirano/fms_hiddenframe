@@ -438,6 +438,18 @@
             
             if (typeof window.loadContent === 'function') {
                 window.loadContent('/fm/bl_update.html', `건물수정(${blId})`);
+                
+                // 페이지 로드 후 강제 새로고침
+                setTimeout(() => {
+                    if (window.BlUpdateModule && typeof window.BlUpdateModule.forceRefresh === 'function') {
+                        window.BlUpdateModule.forceRefresh(blId);
+                    } else if (window.BlUpdateModule) {
+                        // forceRefresh가 없으면 기존 방식
+                        window.BlUpdateModule.data.isInitialized = false;
+                        window.BlUpdateModule.loadBlData(blId);
+                    }
+                }, 1000);
+                
                 window.showStatus && window.showStatus(`건물 수정 페이지를 열었습니다.`);
             } else {
                 console.error('🏢 loadContent 함수를 찾을 수 없습니다.');

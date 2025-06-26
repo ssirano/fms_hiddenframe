@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>실정보 등록</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <style>
+        /* rm_insert 스타일 - rm_update와 유사하게 */
+        #rm_insert_outer {
+            padding: 20px;
+            padding-bottom: 0;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            font-size: 12px;
+        }
+
+        /* 상단 버튼 영역 */
+        #rm_insert_outer .top-buttons {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+
+        #rm_insert_outer .top-buttons button {
+            height: 32px;
+            padding: 0 16px;
+            background: #fff;
+            color: #333;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+        }
+
+        #rm_insert_outer .top-buttons button:hover {
+            background-color: #e9ecef;
+            border-color: #adb5bd;
+        }
+
+        #rm_insert_outer .top-buttons button.btn-primary {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        #rm_insert_outer .top-buttons button.btn-primary:hover {
+            background: #0056b3;
+            border-color: #004085;
+        }
+
+        /* 실정보 영역 */
+        #rm_insert_outer .room-info-area {
+            background-color: white;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        #rm_insert_outer .room-info-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #rm_insert_outer .room-info-table td {
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            font-size: 12px;
+        }
+
+        #rm_insert_outer .room-info-table .label-cell {
+            background-color: #f7f7f7;
+            text-align: center;
+            font-weight: bold;
+            width: 15%;
+        }
+
+        #rm_insert_outer .room-info-table .value-cell {
+            background-color: white;
+            text-align: left;
+            width: 35%;
+            padding-left: 15px;
+        }
+
+        #rm_insert_outer .room-info-table input[type="text"] {
+            width: 200px;
+            height: 32px;
+            padding: 0 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        #rm_insert_outer .room-info-table select {
+            width: 220px;
+            height: 32px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+
+        /* 필수 입력 표시 */
+        .required::after {
+            content: "*";
+            color: red;
+            margin-left: 2px;
+        }
+
+        /* 오류 메시지 */
+        .error-message {
+            color: #dc3545;
+            font-size: 11px;
+            margin-top: 5px;
+        }
+
+        /* 로딩 표시 */
+        #rm_insert_outer .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100px;
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        #rm_insert_outer .loading .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div id="rm_insert_outer">
+        <!-- 상단 버튼 영역 -->
+        <div class="top-buttons">
+            <button type="button" id="btn_save" class="btn-primary">저장</button>
+            <button type="button" id="btn_list">목록보기</button>
+        </div>
+
+        <!-- 실정보 등록 영역 -->
+        <div class="room-info-area">
+            <table class="room-info-table">
+                <tr>
+                    <td class="label-cell required">사업장</td>
+                    <td class="value-cell">
+                        <select id="prop_id" name="prop_id">
+                            <option value="">사업장 선택</option>
+                        </select>
+                    </td>
+                    <td class="label-cell required">실코드</td>
+                    <td class="value-cell">
+                        <input type="text" id="rm_id" name="rm_id">
+                        <div class="error-message" id="rm_id_error" style="display:none;"></div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label-cell required">건물</td>
+                    <td class="value-cell">
+                        <select id="bl_id" name="bl_id">
+                            <option value="">건물 선택</option>
+                        </select>
+                    </td>
+                    <td class="label-cell required">실이름</td>
+                    <td class="value-cell">
+                        <input type="text" id="rm_name" name="rm_name">
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label-cell required">층</td>
+                    <td class="value-cell">
+                        <select id="fl_id" name="fl_id">
+                            <option value="">층 선택</option>
+                        </select>
+                    </td>
+                    <td class="label-cell">&nbsp;</td>
+                    <td class="value-cell">&nbsp;</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <script>
+    // 🛡️ 완전한 스코프 분리
+    (function() {
+        'use strict';
+        
+        console.log('🏗️ rm_insert.html 스크립트 시작!');
+        
+        // 🔥 기존 RmInsertModule 완전 제거 후 재생성
+        if (typeof window.RmInsertModule !== 'undefined') {
+            console.log('🏗️ 기존 RmInsertModule 완전 제거');
+            if (window.RmInsertModule.cleanup && typeof window.RmInsertModule.cleanup === 'function') {
+                window.RmInsertModule.cleanup();
+            }
+            delete window.RmInsertModule;
+        }
+        
+        // 모듈 생성
+        window.RmInsertModule = {
+            // 데이터 저장소
+            data: {
+                propList: [],
+                blList: [],
+                flList: [],
+                isInitialized: false,
+                moduleId: 'rm_insert_' + Date.now()
+            },
+            
+            // 🔧 안전한 DOM 접근 헬퍼
+            safeGetElement: function(id) {
+                try {
+                    const element = document.getElementById(id);
+                    if (!element) {
+                        console.warn('🏗️ [RI] DOM 요소를 찾을 수 없음:', id);
+                    }
+                    return element;
+                } catch (error) {
+                    console.error('🏗️ [RI] DOM 접근 오류:', error);
+                    return null;
+                }
+            },
+
+            // 초기화
+            init: function() {
+                console.log('🏗️ [RI] 실정보 등록 페이지 초기화 시작');
+                
+                const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                const prop_id = window.currentPropId;
+                
+                console.log('🏗️ [RI] 받은 데이터 (초기화):', { em_id, prop_id });
+                
+                if (!em_id) {
+                    console.error('🏗️ [RI] em_id가 없습니다.');
+                    this.showError('사용자 정보를 불러올 수 없습니다.');
+                    return;
+                }
+                
+                this.data.isInitialized = true;
+                
+                // 이벤트 리스너 등록
+                this.bindEvents();
+                
+                // 사업장 목록 로드
+                this.loadPropertyList();
+            },
+            
+            // 이벤트 리스너 등록
+            bindEvents: function() {
+                // 저장 버튼
+                const btnSave = this.safeGetElement('btn_save');
+                if (btnSave) {
+                    btnSave.onclick = () => {
+                        this.saveRoom();
+                    };
+                }
+                
+                // 목록보기 버튼
+                const btnList = this.safeGetElement('btn_list');
+                if (btnList) {
+                    btnList.onclick = () => {
+                        this.goToList();
+                    };
+                }
+                
+                // 사업장 선택 변경
+                const propSelect = this.safeGetElement('prop_id');
+                if (propSelect) {
+                    propSelect.onchange = () => {
+                        this.loadBuildingList(propSelect.value);
+                        this.clearFloorList(); // 층 목록 초기화
+                    };
+                }
+                
+                // 건물 선택 변경
+                const blSelect = this.safeGetElement('bl_id');
+                if (blSelect) {
+                    blSelect.onchange = () => {
+                        this.loadFloorList(blSelect.value);
+                    };
+                }
+                
+                // 실코드 입력 시 중복 체크
+                const rmIdInput = this.safeGetElement('rm_id');
+                if (rmIdInput) {
+                    rmIdInput.onblur = () => {
+                        this.checkDuplicateRmId();
+                    };
+                    rmIdInput.onkeypress = (e) => {
+                        if (e.key === 'Enter') {
+                            this.saveRoom();
+                        }
+                    };
+                }
+                
+                // 실이름 입력 엔터키
+                const rmNameInput = this.safeGetElement('rm_name');
+                if (rmNameInput) {
+                    rmNameInput.onkeypress = (e) => {
+                        if (e.key === 'Enter') {
+                            this.saveRoom();
+                        }
+                    };
+                }
+                
+                console.log('🏗️ [RI] 이벤트 리스너 등록 완료');
+            },
+            
+            // 사업장 목록 로드
+            loadPropertyList: function() {
+                const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                
+                if (!em_id) {
+                    console.error('🏗️ [RI] em_id가 없습니다.');
+                    return;
+                }
+                
+                fetch('fm/rm_insert/get_prop_list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ em_id: em_id })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🏗️ [RI] 사업장 목록 응답:', data);
+                    if (data && data.success) {
+                        this.data.propList = data.data || [];
+                        this.renderPropertySelect(data.data || []);
+                        
+                        // 현재 선택된 사업장이 있으면 자동 선택
+                        const currentPropId = window.currentPropId;
+                        if (currentPropId) {
+                            const propSelect = this.safeGetElement('prop_id');
+                            if (propSelect) {
+                                propSelect.value = currentPropId;
+                                this.loadBuildingList(currentPropId);
+                            }
+                        }
+                    } else {
+                        console.error('🏗️ [RI] 사업장 목록 로드 실패:', data ? data.message : 'Unknown error');
+                        this.renderPropertySelect([]);
+                    }
+                })
+                .catch(error => {
+                    console.error('🏗️ [RI] 사업장 목록 로드 오류:', error);
+                    this.renderPropertySelect([]);
+                    this.showError(`사업장 목록을 불러올 수 없습니다: ${error.message}`);
+                });
+            },
+            
+            // 사업장 선택 옵션 렌더링
+            renderPropertySelect: function(properties) {
+                const select = this.safeGetElement('prop_id');
+                if (!select) return;
+                select.innerHTML = '<option value="">사업장 선택</option>';
+                
+                properties.forEach(property => {
+                    const option = document.createElement('option');
+                    option.value = property.prop_id;
+                    option.textContent = `${property.prop_name} (${property.prop_id})`;
+                    select.appendChild(option);
+                });
+            },
+            
+            // 건물 목록 로드
+            loadBuildingList: function(propId) {
+                const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                
+                const blSelect = this.safeGetElement('bl_id');
+                if (!blSelect) return;
+                blSelect.innerHTML = '<option value="">건물 선택</option>';
+                this.data.blList = [];
+
+                if (!propId) {
+                    console.warn('🏗️ [RI] 건물 목록 로드 - propId 없음');
+                    return;
+                }
+
+                fetch('fm/rm_list/get_bl_list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ em_id: em_id, prop_id: propId })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🏗️ [RI] 건물 목록 응답:', data);
+                    if (data && data.success) {
+                        this.data.blList = data.data || [];
+                        this.renderBuildingSelect(data.data || []);
+                    } else {
+                        console.error('🏗️ [RI] 건물 목록 로드 실패:', data ? data.message : 'Unknown error');
+                        this.renderBuildingSelect([]);
+                    }
+                })
+                .catch(error => {
+                    console.error('🏗️ [RI] 건물 목록 로드 오류:', error);
+                    this.renderBuildingSelect([]);
+                });
+            },
+            
+            // 건물 선택 옵션 렌더링
+            renderBuildingSelect: function(buildings) {
+                const select = this.safeGetElement('bl_id');
+                if (!select) return;
+                select.innerHTML = '<option value="">건물 선택</option>';
+                
+                buildings.forEach(building => {
+                    const option = document.createElement('option');
+                    option.value = building.bl_id;
+                    option.textContent = `${building.bl_name} (${building.bl_id})`;
+                    select.appendChild(option);
+                });
+            },
+
+            // 층 목록 로드
+            loadFloorList: function(blId) {
+                const propId = this.safeGetElement('prop_id').value;
+                const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                
+                const flSelect = this.safeGetElement('fl_id');
+                if (!flSelect) return;
+                flSelect.innerHTML = '<option value="">층 선택</option>';
+                this.data.flList = [];
+
+                if (!propId || !blId) {
+                    console.warn('🏗️ [RI] 층 목록 로드 - 필수 파라미터 누락:', { propId, blId });
+                    return;
+                }
+
+                fetch('fm/rm_list/get_fl_list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prop_id: propId, em_id: em_id, bl_id: blId })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🏗️ [RI] 층 목록 응답:', data);
+                    if (data && data.success) {
+                        this.data.flList = data.data || [];
+                        this.renderFloorSelect(data.data || []);
+                    } else {
+                        console.error('🏗️ [RI] 층 목록 로드 실패:', data ? data.message : 'Unknown error');
+                        this.renderFloorSelect([]);
+                    }
+                })
+                .catch(error => {
+                    console.error('🏗️ [RI] 층 목록 로드 오류:', error);
+                    this.renderFloorSelect([]);
+                });
+            },
+
+            // 층 선택 옵션 렌더링
+            renderFloorSelect: function(floors) {
+                const select = this.safeGetElement('fl_id');
+                if (!select) return;
+                select.innerHTML = '<option value="">층 선택</option>';
+                
+                floors.forEach(floor => {
+                    const option = document.createElement('option');
+                    option.value = floor.fl_id;
+                    option.textContent = `${floor.fl_name} (${floor.fl_id})`;
+                    select.appendChild(option);
+                });
+            },
+            
+            // 층 목록 초기화
+            clearFloorList: function() {
+                const flSelect = this.safeGetElement('fl_id');
+                if (flSelect) {
+                    flSelect.innerHTML = '<option value="">층 선택</option>';
+                }
+                this.data.flList = [];
+            },
+            
+            // 실코드 중복 체크
+            checkDuplicateRmId: function() {
+                const propId = this.safeGetElement('prop_id').value;
+                const blId = this.safeGetElement('bl_id').value;
+                const flId = this.safeGetElement('fl_id').value;
+                const rmId = this.safeGetElement('rm_id').value.trim();
+                const errorDiv = this.safeGetElement('rm_id_error');
+                
+                if (!rmId) {
+                    this.hideError('rm_id_error');
+                    return;
+                }
+                
+                if (!propId || !blId || !flId) {
+                    this.showFieldError('rm_id_error', '사업장, 건물, 층을 먼저 선택해주세요.');
+                    return;
+                }
+                
+                fetch('fm/rm_insert/check_duplicate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prop_id: propId,
+                        bl_id: blId,
+                        fl_id: flId,
+                        rm_id: rmId
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🏗️ [RI] 중복 체크 응답:', data);
+                    if (data && data.success) {
+                        if (data.isDuplicate) {
+                            this.showFieldError('rm_id_error', '이미 존재하는 실코드입니다.');
+                        } else {
+                            this.hideError('rm_id_error');
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('🏗️ [RI] 중복 체크 오류:', error);
+                });
+            },
+            
+            // 실정보 저장
+            saveRoom: function() {
+                const propId = this.safeGetElement('prop_id').value;
+                const blId = this.safeGetElement('bl_id').value;
+                const flId = this.safeGetElement('fl_id').value;
+                const rmId = this.safeGetElement('rm_id').value.trim();
+                const rmName = this.safeGetElement('rm_name').value.trim();
+                
+                // 유효성 검사
+                if (!propId) {
+                    alert('사업장을 선택해주세요.');
+                    this.safeGetElement('prop_id').focus();
+                    return;
+                }
+                if (!blId) {
+                    alert('건물을 선택해주세요.');
+                    this.safeGetElement('bl_id').focus();
+                    return;
+                }
+                if (!flId) {
+                    alert('층을 선택해주세요.');
+                    this.safeGetElement('fl_id').focus();
+                    return;
+                }
+                if (!rmId) {
+                    alert('실코드를 입력해주세요.');
+                    this.safeGetElement('rm_id').focus();
+                    return;
+                }
+                if (!rmName) {
+                    alert('실이름을 입력해주세요.');
+                    this.safeGetElement('rm_name').focus();
+                    return;
+                }
+                
+                if (!confirm('저장하시겠습니까?')) {
+                    return;
+                }
+                
+                const requestData = {
+                    em_id: window.currentEmId || (window.userInfo && window.userInfo.em_id),
+                    prop_id: propId,
+                    bl_id: blId,
+                    fl_id: flId,
+                    rm_id: rmId,
+                    rm_name: rmName
+                };
+                
+                console.log('🏗️ [RI] 실정보 저장 요청:', requestData);
+                
+                fetch('fm/rm_insert/save_room', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🏗️ [RI] 실정보 저장 응답:', data);
+                    if (data && data.success) {
+                        alert('저장되었습니다.');
+                        this.goToList();
+                    } else {
+                        alert(`저장 실패: ${data ? data.message : 'Unknown error'}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('🏗️ [RI] 실정보 저장 오류:', error);
+                    alert(`저장 중 오류가 발생했습니다: ${error.message}`);
+                });
+            },
+            
+            // 목록으로 이동
+            goToList: function() {
+                try {
+                    // tabManager가 있는 경우
+                    if (window.tabManager && window.tabManager.tabs) {
+                        let rmListTabId = null;
+                        
+                        // tabs가 Map 객체인 경우
+                        if (window.tabManager.tabs instanceof Map) {
+                            for (const [tabId, tab] of window.tabManager.tabs.entries()) {
+                                if (tabId.includes('rm_list') || 
+                                    (tab.url && tab.url.includes('rm_list.html')) ||
+                                    (tab.title && tab.title === '실정보')) {
+                                    rmListTabId = tabId;
+                                    console.log('🟢 [RI] 기존 rm_list 탭 발견:', rmListTabId);
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // 기존 탭이 있으면 활성화
+                        if (rmListTabId && typeof window.tabManager.switchToTab === 'function') {
+                            window.tabManager.switchToTab(rmListTabId);
+                            
+                            // 현재 rm_insert 탭 닫기
+                            setTimeout(() => {
+                                if (typeof window.tabManager.removeCurrentTab === 'function') {
+                                    window.tabManager.removeCurrentTab();
+                                }
+                            }, 100);
+                            
+                            // 데이터 새로고침
+                            setTimeout(() => {
+                                if (window.RmListModule && typeof window.RmListModule.refreshData === 'function') {
+                                    window.RmListModule.refreshData();
+                                }
+                            }, 300);
+                            
+                            console.log('🟢 [RI] 기존 rm_list 탭으로 이동 완료');
+                            return;
+                        }
+                        
+                        // 기존 탭이 없으면 새로 생성
+                        if (typeof window.tabManager.addTab === 'function') {
+                            window.tabManager.addTab('fm/rm_list.html', '실정보');
+                            
+                            // 현재 rm_insert 탭 닫기
+                            setTimeout(() => {
+                                if (typeof window.tabManager.removeCurrentTab === 'function') {
+                                    window.tabManager.removeCurrentTab();
+                                }
+                            }, 200);
+                            
+                            return;
+                        }
+                    }
+                    
+                    // fallback
+                    if (typeof window.loadContent === 'function') {
+                        window.loadContent('fm/rm_list.html', '실정보');
+                    } else {
+                        window.location.href = 'fm/rm_list.html';
+                    }
+                    
+                } catch (error) {
+                    console.error('🔴 [RI] 목록 이동 중 오류:', error);
+                    
+                    // 오류 발생 시 강제로 새 탭 생성
+                    if (window.tabManager && typeof window.tabManager.addTab === 'function') {
+                        window.tabManager.addTab('fm/rm_list.html', '실정보');
+                    } else {
+                        window.location.href = 'fm/rm_list.html';
+                    }
+                }
+            },
+            
+            // 필드 오류 표시
+            showFieldError: function(errorId, message) {
+                const errorDiv = this.safeGetElement(errorId);
+                if (errorDiv) {
+                    errorDiv.textContent = message;
+                    errorDiv.style.display = 'block';
+                }
+            },
+            
+            // 오류 숨기기
+            hideError: function(errorId) {
+                const errorDiv = this.safeGetElement(errorId);
+                if (errorDiv) {
+                    errorDiv.style.display = 'none';
+                }
+            },
+            
+            // 일반 오류 표시
+            showError: function(message) {
+                console.error('🔴 [RI] 실정보 등록 오류:', message);
+                alert(message);
+            },
+            
+            // 정리 함수
+            cleanup: function() {
+                console.log('🏗️ [RI] RmInsertModule 정리 중...');
+                this.data.isInitialized = false;
+            }
+        };
+        
+        // 전역 초기화 함수 등록
+        window.initializeRmInsert = function() {
+            window.RmInsertModule.init();
+        };
+        
+        // 자동 초기화 (즉시 실행)
+        setTimeout(() => {
+            console.log('🏗️ [RI] RmInsert 자동 초기화 시작');
+            window.RmInsertModule.init();
+        }, 100);
+        
+        console.log('🏗️ [RI] RmInsertModule 로드 완료');
+        
+    })(); // 즉시 실행 함수 끝
+    </script>
+</body>
+</html>

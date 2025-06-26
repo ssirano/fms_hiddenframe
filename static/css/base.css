@@ -14,11 +14,10 @@ body {
 
 /* 메인 컨테이너 */
 .main-container {
-    width: 100vw;
-    height: 100vh;
-    position: relative;
-    background: white;
+    max-width: 80%;
+    margin: 0 auto;
 }
+
 
 /* 헤더 프레임 */
 .header-frame {

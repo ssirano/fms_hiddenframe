@@ -304,12 +304,15 @@ def get_history_data():
             params = {'bl_id': bl_id}
             
             # 파일 타입 필터
+            # 파일 타입 필터
             if history_type == '1':  # 사진
                 sql += " AND p.filetype = '1'"
             elif history_type == '2':  # 이력관리
                 sql += " AND p.filetype = '2'"
-            elif history_type == '3':  # 파일관리
+            elif history_type == '3':  # 파일관리 (기존)
                 sql += " AND p.filetype = '3'"
+            elif history_type == 'file_all':  # 파일관리 (이미지+파일)
+                sql += " AND (p.filetype = '1' OR p.filetype = '3')"
             
             # 날짜 필터
             if date_start:
@@ -567,15 +570,29 @@ def export_excel():
     except Exception as e:
         print(f"🔴 엑셀 내보내기 중 오류 발생: {str(e)}")
         return jsonify({'success': False, 'message': '엑셀 내보내기 중 오류가 발생했습니다.'})
-
+def safe_int(value):
+    """값을 안전하게 정수로 변환"""
+    try:
+        if value is None:
+            return None
+        # float이든 string이든 일단 float으로 변환 후 int로 변환
+        return int(float(value))
+    except (ValueError, TypeError):
+        return None
 ##### 파일 보기 #####
+BL_PDS_PATH = r"C:\Users\USER04\Documents\python_fms_hiddenframe\upload\bl_pds"
+
 @bl_update_bp.route('/bl_update/view_file', methods=['GET'])
-@login_required  # 추가
+@login_required
 def view_file():
-    auto_number = request.args.get('auto_number')
+    auto_number_param = request.args.get('auto_number')
+    auto_number = safe_int(auto_number_param)
+    
+    print(f"🏢 [bl_update] view_file 폴백 엔드포인트 호출: auto_number={auto_number}")
     
     if not auto_number:
-        return jsonify({'success': False, 'message': 'auto_number가 필요합니다.'})
+        print("🔴 auto_number가 없음")
+        return send_file('static/images/common/no_image.png')
     
     try:
         with engine.connect() as conn:
@@ -587,38 +604,339 @@ def view_file():
             
             result = conn.execute(sql, {"auto_number": auto_number}).fetchone()
             
-            if not result:
-                return jsonify({'success': False, 'message': '파일 정보를 찾을 수 없습니다.'})
+            if not result or not result['maskname']:
+                print(f"🔴 파일 정보 없음: auto_number={auto_number}")
+                return send_file('static/images/common/no_image.png')
             
             file_data = dict(result)
-            file_path = os.path.join('static', 'uploads', file_data['maskname'])
+            maskname = file_data['maskname']
             
-            if not os.path.exists(file_path):
-                return jsonify({'success': False, 'message': '파일이 존재하지 않습니다.'})
+            # ⭐ bl_pds 절대 경로에서 파일 찾기
+            bl_pds_file_path = os.path.join(BL_PDS_PATH, maskname)
             
-            # 파일 확장자에 따른 mimetype 설정
-            file_ext = file_data['maskname'].lower().split('.')[-1]
-            mimetype_map = {
-                'jpg': 'image/jpeg',
-                'jpeg': 'image/jpeg',
-                'png': 'image/png',
-                'gif': 'image/gif',
-                'pdf': 'application/pdf',
-                'doc': 'application/msword',
-                'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'xls': 'application/vnd.ms-excel',
-                'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            print(f"🏢 [bl_update] 폴백에서 파일 경로 확인: {bl_pds_file_path}")
+            
+            if os.path.exists(bl_pds_file_path):
+                print(f"✅ 파일 찾음: {bl_pds_file_path}")
+                
+                # 파일 확장자에 따른 mimetype 설정
+                file_ext = maskname.lower().split('.')[-1]
+                mimetype_map = {
+                    'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+                    'gif': 'image/gif', 'bmp': 'image/bmp', 'webp': 'image/webp',
+                    'svg': 'image/svg+xml'
+                }
+                
+                mimetype = mimetype_map.get(file_ext, 'application/octet-stream')
+                
+                return send_file(
+                    bl_pds_file_path,
+                    mimetype=mimetype,
+                    as_attachment=False,
+                    download_name=file_data['filename']
+                )
+            else:
+                print(f"🔴 파일 없음: {bl_pds_file_path}")
+                return send_file('static/images/common/no_image.png')
+            
+    except Exception as e:
+        print(f"🔴 [bl_update] 폴백 엔드포인트 오류: {str(e)}")
+        return send_file('static/images/common/no_image.png')
+
+
+@bl_update_bp.route('/bl_update/debug_file/<int:auto_number>')    
+@login_required
+def debug_file(auto_number):
+    """파일 존재 여부 디버깅"""
+    try:
+        with engine.connect() as conn:
+            sql = text("""
+                SELECT auto_number, filename, maskname, filetype, title
+                FROM blpds 
+                WHERE auto_number = :auto_number
+            """)
+            
+            result = conn.execute(sql, {"auto_number": auto_number}).fetchone()
+            
+            debug_info = {
+                'auto_number': auto_number,
+                'database_record': dict(result) if result else None,
+                'current_directory': os.getcwd(),
+                'file_checks': [],
+                'uploads_directory_exists': False,
+                'uploads_files': []
             }
             
-            mimetype = mimetype_map.get(file_ext, 'application/octet-stream')
+            if result:
+                maskname = result['maskname']
+                if maskname:
+                    # 여러 경로 확인
+                    possible_paths = [
+                        os.path.join('static', 'uploads', maskname),
+                        os.path.join('uploads', maskname),
+                        maskname,
+                        os.path.join(os.getcwd(), 'static', 'uploads', maskname)
+                    ]
+                    
+                    for path in possible_paths:
+                        exists = os.path.exists(path)
+                        size = os.path.getsize(path) if exists else 0
+                        debug_info['file_checks'].append({
+                            'path': path,
+                            'exists': exists,
+                            'size': size
+                        })
+            
+            # uploads 디렉토리 확인
+            uploads_dir = os.path.join('static', 'uploads')
+            if os.path.exists(uploads_dir):
+                debug_info['uploads_directory_exists'] = True
+                try:
+                    files = os.listdir(uploads_dir)[:20]  # 최대 20개
+                    debug_info['uploads_files'] = files
+                except:
+                    debug_info['uploads_files'] = ['읽기 오류']
+            
+            return jsonify(debug_info)
+            
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'auto_number': auto_number
+        })
+        
+@bl_update_bp.route('/bl_update/export_excel_detailed', methods=['POST'])
+@login_required
+def export_excel_detailed():
+    request_data = request.get_json()
+    bl_id = request_data.get('bl_id')
+    include_history = request_data.get('include_history', False)
+    
+    print(f"🔵 상세 엑셀 내보내기: bl_id={bl_id}, include_history={include_history}")
+    
+    if not bl_id:
+        return jsonify({'success': False, 'message': 'bl_id가 필요합니다.'})
+    
+    try:
+        with engine.connect() as conn:
+            # 건물 기본 정보 조회
+            bl_sql = text("""
+                SELECT 
+                    bl_id, prop_id, name, zip, contact_phone, address1, address2,
+                    use1, contact_fax, DATE(date_bl) as date_bl, price_book_value,
+                    contact_name, maskname, count_fl, count_bf, construction_type,
+                    use_fl_4, use_fl_13, bl_height, bl_depth, width_front_road,
+                    width_back_road, width_side_road, ph, el, el_unit, parking_type,
+                    es, es_unit, parking_unit_inner, parking_unit_outdoor,
+                    cooling_type, heating_type, DATE(date_buy) as date_buy,
+                    DATE(date_buy_land) as date_buy_land, DATE(date_sailed) as date_sailed,
+                    DATE(date_manage_start) as date_manage_start, price_pa_land,
+                    class_land, regist, district, section, landlord, design,
+                    builder, elev_type, elec_type, generator_type, roof_type,
+                    area_total, area_fl, area_bf, area_rentable, area_usable,
+                    area_bl, area_garden, bl_to_land_ratio, fl_space_index,
+                    base_rate, parcel, comments, have_type, branch_type,
+                    close_type, parent_code, is_planed
+                FROM bl 
+                WHERE bl_id = :bl_id
+            """)
+            
+            bl_result = conn.execute(bl_sql, {"bl_id": bl_id}).fetchone()
+            
+            if not bl_result:
+                return jsonify({'success': False, 'message': '건물 데이터를 찾을 수 없습니다.'})
+            
+            bl_data = dict(bl_result)
+            
+            # 엑셀 파일 생성
+            wb = openpyxl.Workbook()
+            
+            # 첫 번째 시트: 건물 개요
+            ws1 = wb.active
+            ws1.title = "건물개요"
+            
+            # 건물 개요 헤더
+            ws1.merge_cells('A1:D1')
+            ws1['A1'] = f"건물 정보 상세 - {bl_data.get('name', '')}"
+            ws1['A1'].font = openpyxl.styles.Font(size=16, bold=True)
+            ws1['A1'].alignment = openpyxl.styles.Alignment(horizontal='center')
+            
+            # 기본 정보
+            basic_info = [
+                ('건물명', bl_data.get('name', '')),
+                ('건물ID', bl_data.get('bl_id', '')),
+                ('소재지', bl_data.get('address1', '')),
+                ('우편번호', bl_data.get('zip', '')),
+                ('소유주', bl_data.get('landlord', '')),
+                ('설계자', bl_data.get('design', '')),
+                ('시공사', bl_data.get('builder', '')),
+                ('준공일', bl_data.get('date_bl', '')),
+                ('주용도', bl_data.get('use1', '')),
+                ('담당자', bl_data.get('contact_name', '')),
+                ('연락처', bl_data.get('contact_phone', '')),
+                ('FAX', bl_data.get('contact_fax', ''))
+            ]
+            
+            row = 3
+            for label, value in basic_info:
+                ws1[f'A{row}'] = label
+                ws1[f'A{row}'].font = openpyxl.styles.Font(bold=True)
+                ws1[f'A{row}'].fill = openpyxl.styles.PatternFill(start_color='E8F4F8', end_color='E8F4F8', fill_type='solid')
+                ws1[f'B{row}'] = value
+                row += 1
+            
+            # 두 번째 시트: 면적 및 구조 정보
+            ws2 = wb.create_sheet("면적및구조")
+            
+            ws2.merge_cells('A1:D1')
+            ws2['A1'] = "면적 및 구조 정보"
+            ws2['A1'].font = openpyxl.styles.Font(size=14, bold=True)
+            ws2['A1'].alignment = openpyxl.styles.Alignment(horizontal='center')
+            
+            area_info = [
+                ('연면적(㎡)', bl_data.get('area_total', '')),
+                ('건축면적(㎡)', bl_data.get('area_bl', '')),
+                ('대지면적(㎡)', bl_data.get('parcel', '')),
+                ('지상층면적(㎡)', bl_data.get('area_fl', '')),
+                ('지하층면적(㎡)', bl_data.get('area_bf', '')),
+                ('임대가능면적(㎡)', bl_data.get('area_rentable', '')),
+                ('전용면적(㎡)', bl_data.get('area_usable', '')),
+                ('조경면적(㎡)', bl_data.get('area_garden', '')),
+                ('지상층수', bl_data.get('count_fl', '')),
+                ('지하층수', bl_data.get('count_bf', '')),
+                ('최고높이(m)', bl_data.get('bl_height', '')),
+                ('지하깊이(m)', bl_data.get('bl_depth', '')),
+                ('건축구조', bl_data.get('construction_type', '')),
+                ('지붕형태', bl_data.get('roof_type', '')),
+                ('건폐율(%)', bl_data.get('bl_to_land_ratio', '')),
+                ('용적율(%)', bl_data.get('fl_space_index', ''))
+            ]
+            
+            row = 3
+            for label, value in area_info:
+                ws2[f'A{row}'] = label
+                ws2[f'A{row}'].font = openpyxl.styles.Font(bold=True)
+                ws2[f'A{row}'].fill = openpyxl.styles.PatternFill(start_color='F0F8E8', end_color='F0F8E8', fill_type='solid')
+                ws2[f'B{row}'] = value
+                row += 1
+            
+            # 세 번째 시트: 설비 및 기타 정보
+            ws3 = wb.create_sheet("설비및기타")
+            
+            ws3.merge_cells('A1:D1')
+            ws3['A1'] = "설비 및 기타 정보"
+            ws3['A1'].font = openpyxl.styles.Font(size=14, bold=True)
+            ws3['A1'].alignment = openpyxl.styles.Alignment(horizontal='center')
+            
+            facility_info = [
+                ('주차설비', bl_data.get('parking_type', '')),
+                ('승강설비', bl_data.get('elev_type', '')),
+                ('수전설비', bl_data.get('elec_type', '')),
+                ('발전설비', bl_data.get('generator_type', '')),
+                ('난방설비', bl_data.get('heating_type', '')),
+                ('냉방설비', bl_data.get('cooling_type', '')),
+                ('옥내주차대수', bl_data.get('parking_unit_inner', '')),
+                ('옥외주차대수', bl_data.get('parking_unit_outdoor', '')),
+                ('E/L대수', bl_data.get('el_unit', '')),
+                ('E/S대수', bl_data.get('es_unit', '')),
+                ('전면도로폭(m)', bl_data.get('width_front_road', '')),
+                ('후면도로폭(m)', bl_data.get('width_back_road', '')),
+                ('측면도로폭(m)', bl_data.get('width_side_road', '')),
+                ('지목', bl_data.get('class_land', '')),
+                ('지역', bl_data.get('district', '')),
+                ('지구', bl_data.get('section', '')),
+                ('건물취득일', bl_data.get('date_buy', '')),
+                ('대지취득일', bl_data.get('date_buy_land', '')),
+                ('관리개시일', bl_data.get('date_manage_start', '')),
+                ('매각일자', bl_data.get('date_sailed', '')),
+                ('장부가(원)', bl_data.get('price_book_value', '')),
+                ('공시지가(원)', bl_data.get('price_pa_land', '')),
+                ('비고', bl_data.get('comments', ''))
+            ]
+            
+            row = 3
+            for label, value in facility_info:
+                ws3[f'A{row}'] = label
+                ws3[f'A{row}'].font = openpyxl.styles.Font(bold=True)
+                ws3[f'A{row}'].fill = openpyxl.styles.PatternFill(start_color='F8F0E8', end_color='F8F0E8', fill_type='solid')
+                ws3[f'B{row}'] = value
+                row += 1
+            
+            # 이력 정보 포함
+            if include_history:
+                # 이력 데이터 조회
+                history_sql = text("""
+                    SELECT 
+                        p.auto_number,
+                        p.title,
+                        p.contents,
+                        p.reg_man,
+                        DATE(p.reg_date) as reg_date,
+                        p.filename,
+                        p.filetype,
+                        e.name as reg_man_name,
+                        CASE 
+                            WHEN p.filetype = '1' THEN '이미지'
+                            WHEN p.filetype = '2' THEN '텍스트'
+                            WHEN p.filetype = '3' THEN '파일'
+                            ELSE '기타'
+                        END as filetype_name
+                    FROM blpds p
+                    LEFT JOIN em e ON p.reg_man = e.em_id
+                    WHERE p.bl_id = :bl_id
+                    ORDER BY p.reg_date DESC
+                """)
+                
+                history_result = conn.execute(history_sql, {"bl_id": bl_id}).fetchall()
+                
+                if history_result:
+                    ws4 = wb.create_sheet("건물이력")
+                    
+                    # 헤더
+                    headers = ['번호', '제목', '내용', '유형', '등록자', '등록일', '파일명']
+                    for col, header in enumerate(headers, 1):
+                        cell = ws4.cell(row=1, column=col, value=header)
+                        cell.font = openpyxl.styles.Font(bold=True)
+                        cell.fill = openpyxl.styles.PatternFill(start_color='E8E8F8', end_color='E8E8F8', fill_type='solid')
+                    
+                    # 데이터
+                    for row_num, row_data in enumerate(history_result, 2):
+                        ws4.cell(row=row_num, column=1, value=row_data['auto_number'])
+                        ws4.cell(row=row_num, column=2, value=row_data['title'] or '')
+                        ws4.cell(row=row_num, column=3, value=row_data['contents'] or '')
+                        ws4.cell(row=row_num, column=4, value=row_data['filetype_name'])
+                        ws4.cell(row=row_num, column=5, value=row_data['reg_man_name'] or row_data['reg_man'])
+                        ws4.cell(row=row_num, column=6, value=row_data['reg_date'].strftime('%Y-%m-%d') if row_data['reg_date'] else '')
+                        ws4.cell(row=row_num, column=7, value=row_data['filename'] or '')
+                    
+                    # 열 너비 조정
+                    ws4.column_dimensions['B'].width = 30  # 제목
+                    ws4.column_dimensions['C'].width = 50  # 내용
+                    ws4.column_dimensions['G'].width = 25  # 파일명
+            
+            # 모든 시트의 열 너비 조정
+            for ws in [ws1, ws2, ws3]:
+                ws.column_dimensions['A'].width = 20
+                ws.column_dimensions['B'].width = 30
+            
+            # 메모리에 파일 저장
+            output = io.BytesIO()
+            wb.save(output)
+            output.seek(0)
+            
+            # 파일명 생성
+            bl_name = bl_data.get('name', '건물정보').replace('/', '_').replace('\\', '_')
+            filename = f"건물정보상세_{bl_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+            
+            print(f"🟢 상세 엑셀 생성 완료: {filename}")
             
             return send_file(
-                file_path,
-                mimetype=mimetype,
-                as_attachment=False,
-                download_name=file_data['filename']
+                output,
+                mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                as_attachment=True,
+                download_name=filename
             )
             
     except Exception as e:
-        print(f"🔴 파일 보기 중 오류 발생: {str(e)}")
-        return jsonify({'success': False, 'message': '파일 보기 중 오류가 발생했습니다.'})
+        print(f"🔴 상세 엑셀 내보내기 중 오류 발생: {str(e)}")
+        return jsonify({'success': False, 'message': f'엑셀 내보내기 중 오류가 발생했습니다: {str(e)}'})

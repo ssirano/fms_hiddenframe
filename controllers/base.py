@@ -135,7 +135,7 @@ def get_menu_data():
                     original_url = menu2["url"]
                     converted_url = original_url.replace(".jsp", ".html") if original_url else ""
                     item["menu_02_url"] = converted_url
-                    print(f"🔄 URL 변환: {original_url} → {converted_url}")
+                   
 
                 for menu3 in sorted(level3_menus, key=lambda x: x["level1"]):
                     if menu3["level2"] == menu2["level1"]:
@@ -148,7 +148,7 @@ def get_menu_data():
                             original_url = menu3["url"]
                             converted_url = original_url.replace(".jsp", ".html") if original_url else ""
                             sub_item["menu_03_url"] = converted_url
-                            print(f"🔄 URL 변환: {original_url} → {converted_url}")
+                         
                         item["menu_03_data"].append(sub_item)
                 result.append(item) 
             return result
@@ -344,7 +344,6 @@ def get_hiddenframe_menu_hierarchy_by_module(module_id, all_menus):
         if menu2_url and menu2_url.strip():
             converted_url = menu2_url.replace('.jsp', '.html')
             menu2_item["menu_02_url"] = converted_url
-            print(f"🔄 Level2 URL 변환: {menu2_url} → {converted_url}")
 
         for menu3 in sorted(level3_menus, key=lambda x: x["level1"]):
             if menu3["level2"] == menu2["level1"]:
@@ -358,7 +357,6 @@ def get_hiddenframe_menu_hierarchy_by_module(module_id, all_menus):
                 if menu3_url and menu3_url.strip():
                     converted_url = menu3_url.replace('.jsp', '.html')
                     menu3_item["menu_03_url"] = converted_url
-                    print(f"🔄 Level3 URL 변환: {menu3_url} → {converted_url}")
                     
                 menu2_item["menu_03_data"].append(menu3_item)
 

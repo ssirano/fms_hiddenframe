@@ -1,0 +1,1044 @@
+<link rel="stylesheet" href="/static/css/common.css">
+<style>
+    /* fl_list 스타일 - 다른 페이지와 일관성 맞춤 */
+    #fl_list_outer {
+        padding: 20px;
+        padding-bottom: 0;
+        overflow-y: auto;
+        background-color: #f8f9fa;
+        font-size: 12px;
+    }
+
+    /* 상단 영역 */
+    #fl_list_outer .top-area {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding: 15px;
+        background-color: white;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    #fl_list_outer .top-area .left-section {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    #fl_list_outer .top-area label {
+        font-size: 12px;
+        font-weight: bold;
+        color: #495057;
+        white-space: nowrap;
+    }
+
+    #fl_list_outer .top-area select {
+        height: 32px;
+        border-radius: 4px;
+        border: 1px solid #ced4da;
+        min-width: 200px;
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+
+    #fl_list_outer .top-area button {
+        height: 32px;
+        padding: 0 12px;
+        background: #fff;
+        color: #333;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.15s ease-in-out;
+    }
+
+    #fl_list_outer .top-area button:hover {
+        background-color: #e9ecef;
+        border-color: #adb5bd;
+    }
+
+    /* 메인 영역 */
+    #fl_list_outer .main-area {
+        background-color: white;
+        border-radius: 5px;
+        border: 1px solid #dee2e6;
+        padding: 20px;
+        height: calc(100vh - 200px);
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* 검색 영역 */
+    #fl_list_outer .search-area {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    #fl_list_outer .search-area .search-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    #fl_list_outer .search-area input[type="text"] {
+        height: 32px;
+        padding: 0 8px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        min-width: 250px;
+        font-size: 12px;
+    }
+
+    #fl_list_outer .search-area button {
+        height: 32px;
+        padding: 0 16px;
+        background: #007bff;
+        color: white;
+        border: 1px solid #007bff;
+        border-radius: 4px;
+        font-size: 12px;
+        cursor: pointer;
+    }
+
+    #fl_list_outer .search-area button:hover {
+        background: #0056b3;
+        border-color: #004085;
+    }
+
+    /* 데이터 테이블 영역 */
+    #fl_list_outer .data-table-wrapper {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    #fl_list_outer .data-table {
+        flex: 1;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+    }
+
+    #fl_list_outer .data-table .table-header {
+        display: flex;
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        font-weight: bold;
+        font-size: 12px;
+        height: 40px;
+        align-items: center;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    #fl_list_outer .data-table .table-header .header-cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px;
+        border-right: 1px solid #dee2e6;
+        position: relative;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+    }
+
+    #fl_list_outer .data-table .table-header .header-cell:hover {
+        background-color: #e9ecef;
+    }
+
+    #fl_list_outer .data-table .table-header .header-cell:last-child {
+        border-right: none;
+    }
+
+    /* 정렬 아이콘 */
+    #fl_list_outer .data-table .sort-icon {
+        position: absolute;
+        right: 8px;
+        width: 12px;
+        height: 12px;
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: contain;
+        cursor: pointer;
+    }
+
+    /* 정렬 아이콘 - 이미지 대신 CSS로 구현 */
+    #fl_list_outer .data-table .sort-both::after { 
+        content: '⇅'; 
+        color: #999; 
+        font-size: 10px;
+    }
+    #fl_list_outer .data-table .sort-asc::after { 
+        content: '▲'; 
+        color: #007bff; 
+        font-size: 8px;
+    }
+    #fl_list_outer .data-table .sort-desc::after { 
+        content: '▼'; 
+        color: #007bff; 
+        font-size: 8px;
+    }
+
+    /* 테이블 본문 */
+    #fl_list_outer .data-table .table-content {
+        display: block;
+    }
+
+    #fl_list_outer .data-table .table-row {
+        display: flex;
+        border-bottom: 1px solid #dee2e6;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+        min-height: 36px;
+        align-items: center;
+    }
+
+    #fl_list_outer .data-table .table-row:hover {
+        background-color: #f8f9fa;
+    }
+
+    #fl_list_outer .data-table .table-row.selected {
+        background-color: #e3f2fd;
+        border-left: 3px solid #2196f3;
+    }
+
+    #fl_list_outer .data-table .table-cell {
+        display: flex;
+        align-items: center;
+        padding: 8px;
+        border-right: 1px solid #dee2e6;
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    #fl_list_outer .data-table .table-cell:last-child {
+        border-right: none;
+    }
+
+    /* 텍스트 정렬 */
+    #fl_list_outer .data-table .text-center { justify-content: center; }
+    #fl_list_outer .data-table .text-left { justify-content: flex-start; }
+    #fl_list_outer .data-table .text-right { justify-content: flex-end; }
+
+    /* 컬럼 너비 */
+    #fl_list_outer .data-table .col-prop { width: 20%; }
+    #fl_list_outer .data-table .col-building { width: 20%; }
+    #fl_list_outer .data-table .col-floor { width: 15%; }
+    #fl_list_outer .data-table .col-area { width: 15%; }
+    #fl_list_outer .data-table .col-tenant { width: 30%; }
+
+    /* 합계 행 */
+    #fl_list_outer .data-table .total-row {
+        background-color: #f8f9fa;
+        font-weight: bold;
+        border-top: 2px solid #007bff;
+    }
+
+    /* 빈 데이터 메시지 */
+    #fl_list_outer .data-table .empty-message {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100px;
+        color: #6c757d;
+        font-size: 14px;
+        border-bottom: none;
+    }
+
+    /* 페이지네이션 영역 */
+    #fl_list_outer .pagination-area {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #dee2e6;
+        flex-shrink: 0;
+    }
+
+    #fl_list_outer .pagination-area .pagination-left {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    #fl_list_outer .pagination-area label {
+        font-size: 12px;
+        color: #495057;
+        white-space: nowrap;
+    }
+
+    #fl_list_outer .pagination-area select {
+        width: 80px;
+        height: 32px;
+        border-radius: 4px;
+        border: 1px solid #ced4da;
+        font-size: 12px;
+    }
+
+    #fl_list_outer .pagination-area .page-info {
+        font-size: 12px;
+        color: #495057;
+    }
+
+    #fl_list_outer .pagination-area .page-info .highlight {
+        font-weight: bold;
+        color: #007bff;
+    }
+
+    /* 페이지네이션 버튼 */
+    #fl_list_outer .pagination {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+    }
+
+    #fl_list_outer .pagination .page-btn {
+        width: 32px;
+        height: 32px;
+        border: 1px solid #dee2e6;
+        background: white;
+        color: #495057;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.15s ease;
+    }
+
+    #fl_list_outer .pagination .page-btn:hover {
+        background: #e9ecef;
+        border-color: #adb5bd;
+    }
+
+    #fl_list_outer .pagination .page-btn.active {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+
+    #fl_list_outer .pagination .page-btn.disabled {
+        background: #f8f9fa;
+        color: #6c757d;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    /* 로딩 표시 */
+    #fl_list_outer .loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 200px;
+        font-size: 14px;
+        color: #6c757d;
+    }
+
+    #fl_list_outer .loading .spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #f3f3f3;
+        border-top: 2px solid #007bff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 10px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* 반응형 */
+    @media (max-width: 768px) {
+        #fl_list_outer {
+            padding: 10px;
+        }
+        
+        #fl_list_outer .top-area {
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        #fl_list_outer .search-area {
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        #fl_list_outer .search-area .search-left {
+            width: 100%;
+        }
+        
+        #fl_list_outer .search-area input[type="text"] {
+            width: 100%;
+        }
+    }
+</style>
+
+<div id="fl_list_outer">
+    <!-- 상단 영역 -->
+    <div class="top-area">
+        <div class="left-section">
+            <label for="bl_select">건물</label>
+            <select id="bl_select">
+                <option value="">건물 선택</option>
+            </select>
+        </div>
+        <div class="right-section">
+            <button type="button" id="btn_reset">초기화</button>
+        </div>
+    </div>
+
+    <!-- 메인 영역 -->
+    <div class="main-area">
+        <!-- 검색 영역 -->
+        <div class="search-area">
+            <div class="search-left">
+                <input type="text" id="search_keyword" placeholder="검색어를 입력하세요 (층명, 건물명, 사업장명 등)">
+            </div>
+            <button type="button" id="btn_search">조회</button>
+        </div>
+
+        <!-- 데이터 테이블 영역 -->
+        <div class="data-table-wrapper">
+            <div class="data-table">
+                <!-- 테이블 헤더 -->
+                <div class="table-header">
+                    <div class="header-cell col-prop text-center" data-sort="prop_name">
+                        <span>사업장</span>
+                        <div class="sort-icon sort-both"></div>
+                    </div>
+                    <div class="header-cell col-building text-center" data-sort="bl_name">
+                        <span>건물</span>
+                        <div class="sort-icon sort-both"></div>
+                    </div>
+                    <div class="header-cell col-floor text-center" data-sort="fl_name">
+                        <span>층</span>
+                        <div class="sort-icon sort-both"></div>
+                    </div>
+                    <div class="header-cell col-area text-center" data-sort="area_fl">
+                        <span>층면적</span>
+                        <div class="sort-icon sort-both"></div>
+                    </div>
+                    <div class="header-cell col-tenant text-center" data-sort="tenant_names">
+                        <span>입주사 현황</span>
+                        <div class="sort-icon sort-both"></div>
+                    </div>
+                </div>
+
+                <!-- 테이블 본문 -->
+                <div class="table-content" id="table_content">
+                    <!-- 로딩 표시 -->
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        층 정보를 불러오는 중...
+                    </div>
+                </div>
+            </div>
+
+            <!-- 페이지네이션 영역 -->
+            <div class="pagination-area">
+                <div class="pagination-left">
+                    <label for="page_size">페이지당 목록 수:</label>
+                    <select id="page_size">
+                        <option value="10" selected>10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="All">전체</option>
+                    </select>
+                </div>
+
+                <div class="pagination" id="pagination">
+                    <!-- 페이지네이션 버튼들이 동적으로 생성됩니다 -->
+                </div>
+
+                <div class="page-info">
+                    전체 <span class="highlight" id="total_count">0</span>개 | 
+                    <span class="highlight" id="current_page">1</span> / 
+                    <span class="highlight" id="total_pages">1</span> 페이지
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 히든 필드들 -->
+    <input type="hidden" id="current_sort_column" value="">
+    <input type="hidden" id="current_sort_direction" value="">
+</div>
+
+<script>
+// 🛡️ 완전한 스코프 분리 - 변수 충돌 방지
+(function() {
+    'use strict';
+    
+
+    
+    // 네임스페이스 생성 - 중복 방지
+  
+    console.log('🏢 fl_list.html 스크립트 시작!');
+    
+    // 네임스페이스 생성 - 중복 방지 및 재초기화 로직
+    if (typeof window.FlListModule !== 'undefined') {
+        console.log('🏢 기존 FlListModule 재초기화 준비');
+        // 기존 모듈의 data를 초기화하여 다음 init 호출 시 완전한 재로딩이 이루어지도록 합니다.
+        if (window.FlListModule.data) {
+            window.FlListModule.data.isInitialized = false; // 초기화 플래그 리셋
+            // 다른 상태들도 필요하다면 함께 초기화합니다.
+            window.FlListModule.data.currentPage = 1;
+            window.FlListModule.data.sortColumn = null;
+            window.FlListModule.data.sortDirection = 'both';
+            window.FlListModule.data.blList = [];
+            window.FlListModule.data.flList = [];
+            window.FlListModule.data.lastClickTime = 0;
+            window.FlListModule.data.lastClickKey = null;
+        }
+    }
+    
+    // 모듈 생성
+    window.FlListModule = {
+        // 데이터 저장소
+        data: {
+            currentPage: 1,
+            totalPages: 1,
+            totalCount: 0,
+            pageSize: 10,
+            sortColumn: null,
+            sortDirection: 'both',
+            blList: [],
+            flList: [],
+            isInitialized: false,
+            lastClickTime: 0,
+            lastClickKey: null
+        },
+        
+        // 초기화
+        init: function() {
+            console.log('🏢 층정보 목록 페이지 초기화 시작');
+            
+            if (this.data.isInitialized) {
+                console.log('🏢 이미 초기화됨, 데이터만 새로고침');
+                this.refreshData();
+                return;
+            }
+            
+            const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+            const prop_id = window.currentPropId;
+            
+            console.log('🏢 받은 데이터:', { em_id, prop_id });
+            
+            if (!em_id) {
+                console.error('🏢 em_id가 없습니다.');
+                this.showError('사용자 정보를 불러올 수 없습니다.');
+                return;
+            }
+            
+            if (!prop_id) {
+                console.error('🏢 prop_id가 없습니다.');
+                this.showError('사업소를 선택해주세요.');
+                return;
+            }
+            
+            this.data.isInitialized = true;
+            
+            // 이벤트 리스너 등록
+            this.bindEvents();
+            
+            // 건물 목록 로드
+            this.loadBuildingList();
+            
+            // 층 데이터 로드
+            this.loadFloorData('read');
+        },
+        
+        // 데이터 새로고침
+        refreshData: function() {
+            console.log('🏢 층정보 데이터 새로고침');
+            this.loadBuildingList();
+            this.loadFloorData('read');
+        },
+        
+        // 이벤트 리스너 등록
+        bindEvents: function() {
+            // 검색 버튼
+            document.getElementById('btn_search').onclick = () => {
+                this.data.currentPage = 1;
+                this.loadFloorData('search');
+            };
+            
+            // 검색 입력 엔터키
+            document.getElementById('search_keyword').onkeypress = (e) => {
+                if (e.key === 'Enter') {
+                    this.data.currentPage = 1;
+                    this.loadFloorData('search');
+                }
+            };
+            
+            // 초기화 버튼
+            document.getElementById('btn_reset').onclick = () => {
+                this.resetFilters();
+            };
+            
+            // 건물 선택 변경
+            document.getElementById('bl_select').onchange = () => {
+                this.data.currentPage = 1;
+                this.loadFloorData('search');
+            };
+            
+            // 페이지 크기 변경
+            document.getElementById('page_size').onchange = () => {
+                this.data.currentPage = 1;
+                this.data.pageSize = document.getElementById('page_size').value;
+                this.loadFloorData('search');
+            };
+            
+            // 정렬 클릭 이벤트
+            document.querySelectorAll('.header-cell[data-sort]').forEach(header => {
+                header.onclick = () => {
+                    const sortColumn = header.dataset.sort;
+                    this.handleSort(sortColumn);
+                };
+            });
+            
+            console.log('🏢 이벤트 리스너 등록 완료');
+        },
+        
+        // 건물 목록 로드
+        loadBuildingList: function() {
+            const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+            const prop_id = window.currentPropId;
+            
+            if (!em_id || !prop_id) {
+                console.error('🏢 필수 파라미터 누락:', { em_id, prop_id });
+                this.showError('필수 파라미터가 누락되었습니다.');
+                return;
+            }
+            
+            fetch('/fm/fl_list/get_bl_list', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ em_id: em_id, prop_id: prop_id })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('🏢 건물 목록 응답:', data);
+                if (data && data.success) {
+                    this.data.blList = data.data || [];
+                    this.renderBuildingSelect(data.data || []);
+                    console.log('🏢 건물 목록 로드 완료:', (data.data || []).length, '개');
+                } else {
+                    console.error('🏢 건물 목록 로드 실패:', data ? data.message : 'Unknown error');
+                    this.renderBuildingSelect([]); // 빈 목록으로 렌더링
+                }
+            })
+            .catch(error => {
+                console.error('🏢 건물 목록 로드 오류:', error);
+                this.renderBuildingSelect([]); // 빈 목록으로 렌더링
+                this.showError(`건물 목록을 불러올 수 없습니다: ${error.message}`);
+            });
+        },
+        
+        // 건물 선택 옵션 렌더링
+        renderBuildingSelect: function(buildings) {
+            const select = document.getElementById('bl_select');
+            select.innerHTML = '<option value="">건물 선택</option>';
+            
+            buildings.forEach(building => {
+                const option = document.createElement('option');
+                option.value = building.bl_id;
+                option.textContent = `${building.bl_name} (${building.bl_id})`;
+                select.appendChild(option);
+            });
+        },
+        
+        // 층 데이터 로드
+        loadFloorData: function(mode = 'read') {
+            const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+            const prop_id = window.currentPropId;
+            
+            if (!em_id || !prop_id) {
+                console.warn('🏢 필수 파라미터 누락:', { em_id, prop_id });
+                this.showError('사용자 정보 또는 사업장 정보가 없습니다.');
+                return;
+            }
+            
+            this.showLoading();
+            
+            const requestData = {
+                em_id: em_id,
+                prop_id: prop_id,
+                page_size: this.data.pageSize,
+                page_number: this.data.currentPage,
+                is_first_page: this.data.currentPage === 1,
+                is_last_page: this.data.currentPage === this.data.totalPages
+            };
+            
+            // 검색 조건 추가
+            if (mode === 'search') {
+                const keyword = document.getElementById('search_keyword');
+                const blSelect = document.getElementById('bl_select');
+                
+                if (keyword && keyword.value.trim()) {
+                    requestData.keyword = keyword.value.trim();
+                }
+                if (blSelect && blSelect.value) {
+                    requestData.bl_id = blSelect.value;
+                }
+            }
+            
+            // 정렬 조건 추가
+            if (this.data.sortColumn && this.data.sortDirection !== 'both') {
+                requestData.sort_column = this.data.sortColumn;
+                requestData.sort_direction = this.data.sortDirection;
+            }
+            
+            const url = mode === 'search' ? 
+                '/fm/fl_list/searchDataSheet_flList_data' : 
+                '/fm/fl_list/readDataSheet_flList_data';
+            
+            console.log('🏢 층 데이터 요청:', { url, requestData });
+            
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('🏢 층 데이터 응답:', data);
+                if (data && data.success) {
+                    this.data.flList = data.result_data || [];
+                    this.data.currentPage = data.current_page || 1;
+                    this.data.totalPages = data.total_pages || 1;
+                    this.data.totalCount = data.total_count || 0;
+                    
+                    this.renderFloorTable(data.result_data || [], data.total_area);
+                    this.renderPagination();
+                    this.updateCountInfo();
+                    
+                    console.log('🏢 층 데이터 로드 완료:', (data.result_data || []).length, '개');
+                } else {
+                    console.error('🏢 층 데이터 로드 실패:', data ? data.message : 'Unknown error');
+                    this.showError(`데이터를 불러올 수 없습니다: ${data ? data.message : 'Unknown error'}`);
+                }
+            })
+            .catch(error => {
+                console.error('🏢 층 데이터 로드 오류:', error);
+                this.showError(`데이터를 불러오는 중 오류가 발생했습니다: ${error.message}`);
+            });
+        },
+        
+        // 층 테이블 렌더링
+        renderFloorTable: function(floorData, totalArea) {
+            const tableContent = document.getElementById('table_content');
+            
+            if (!floorData || floorData.length === 0) {
+                tableContent.innerHTML = `
+                    <div class="empty-message">
+                        검색 결과가 없습니다.
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            
+            floorData.forEach(floor => {
+                const propDisplay = floor.prop_name ? `${floor.prop_name} (${floor.prop_id})` : '';
+                const blDisplay = floor.bl_name ? `${floor.bl_name} (${floor.bl_id})` : '';
+                const flDisplay = floor.fl_name ? `${floor.fl_name} (${floor.fl_id})` : '';
+                const areaDisplay = floor.area_fl_formatted ? `${floor.area_fl_formatted}㎡` : '';
+                
+                html += `
+                    <div class="table-row" 
+                         data-prop-id="${floor.prop_id}" 
+                         data-bl-id="${floor.bl_id}" 
+                         data-fl-id="${floor.fl_id}"
+                         data-prop-name="${floor.prop_name || ''}"
+                         data-bl-name="${floor.bl_name || ''}"
+                         data-fl-name="${floor.fl_name || ''}"
+                         onclick="FlListModule.selectFloor(this)">
+                        <div class="table-cell col-prop text-left">${propDisplay}</div>
+                        <div class="table-cell col-building text-left">${blDisplay}</div>
+                        <div class="table-cell col-floor text-center">${flDisplay}</div>
+                        <div class="table-cell col-area text-right">${areaDisplay}</div>
+                        <div class="table-cell col-tenant text-left">${floor.tenant_names || ''}</div>
+                    </div>
+                `;
+            });
+            
+            // 합계 행 추가
+           
+            
+            tableContent.innerHTML = html;
+        },
+        
+        // 층 선택
+        selectFloor: function(element) {
+            const propId = element.dataset.propId;
+            const blId = element.dataset.blId;
+            const flId = element.dataset.flId;
+            
+            if (!propId || !blId || !flId) {
+                console.log('🔴 필수 ID가 없습니다.');
+                return;
+            }
+            
+            // 중복 클릭 방지
+            const clickKey = `${propId}_${blId}_${flId}`;
+            if (this.data.lastClickKey === clickKey && (Date.now() - this.data.lastClickTime) < 1000) {
+                console.log('🟡 중복 클릭 방지');
+                return;
+            }
+            
+            this.data.lastClickKey = clickKey;
+            this.data.lastClickTime = Date.now();
+            
+            console.log('🔵 층 선택됨:', { propId, blId, flId });
+            
+            // 선택된 층 정보를 전역 변수에 저장
+            window.selected_fl_prop_id = propId;
+            window.selected_fl_bl_id = blId;
+            window.selected_fl_id = flId;
+            window.selected_prop_name = element.dataset.propName;
+            window.selected_bl_name = element.dataset.blName;
+            window.selected_fl_name = element.dataset.flName;
+            
+            // 선택 표시
+            document.querySelectorAll('.table-row').forEach(row => {
+                row.classList.remove('selected');
+            });
+            element.classList.add('selected');
+            
+            // fl_update 페이지로 이동
+            this.navigateToFlUpdate(propId, blId, flId);
+        },
+        
+        // fl_update로 이동
+        navigateToFlUpdate: function(propId, blId, flId) {
+            try {
+                console.log('🟢 fl_update로 이동:', { propId, blId, flId });
+                
+                // 💡 핵심: HiddenFrame 탭 시스템 사용
+                if (window.tabManager && typeof window.tabManager.addTab === 'function') {
+                    const url = `/fm/fl_update.html?prop_id=${propId}&bl_id=${blId}&fl_id=${flId}`;
+                    const title = `층수정(${flId})`;
+                    
+                    // 기존 탭 제거 후 새 탭 생성
+                    const existingTabId = 'tab__fm_fl_update_html';
+                    window.tabManager.removeTab(existingTabId);
+                    
+                    setTimeout(() => {
+                        window.tabManager.addTab(url, title);
+                        if (window.showStatus) {
+                            window.showStatus(`층수정 페이지(${flId})를 열었습니다.`);
+                        }
+                    }, 100);
+                    
+                } else if (typeof window.loadContent === 'function') {
+                    // Fallback: 기존 방식
+                    const url = `/fm/fl_update.html?prop_id=${propId}&bl_id=${blId}&fl_id=${flId}`;
+                    window.loadContent(url, `층수정(${flId})`);
+                    
+                } else {
+                    console.error('🔴 탭 생성 함수를 찾을 수 없습니다.');
+                }
+                
+            } catch (error) {
+                console.error('🔴 fl_update 이동 중 오류:', error);
+            }
+        },
+        
+        // 정렬 처리
+        handleSort: function(column) {
+            if (this.data.sortColumn === column) {
+                // 같은 컬럼 클릭시 정렬 방향 변경
+                if (this.data.sortDirection === 'both') {
+                    this.data.sortDirection = 'asc';
+                } else if (this.data.sortDirection === 'asc') {
+                    this.data.sortDirection = 'desc';
+                } else {
+                    this.data.sortDirection = 'both';
+                }
+            } else {
+                // 다른 컬럼 클릭시 새로 정렬
+                this.data.sortColumn = column;
+                this.data.sortDirection = 'asc';
+            }
+            
+            this.updateSortIcons();
+            this.data.currentPage = 1;
+            this.loadFloorData('search');
+            
+            console.log('🔄 정렬 변경:', { column, direction: this.data.sortDirection });
+        },
+        
+        // 정렬 아이콘 업데이트
+        updateSortIcons: function() {
+            // 모든 정렬 아이콘 초기화
+            document.querySelectorAll('.sort-icon').forEach(icon => {
+                icon.className = 'sort-icon sort-both';
+            });
+            
+            // 현재 정렬 컬럼 아이콘 업데이트
+            if (this.data.sortColumn) {
+                const headerCell = document.querySelector(`[data-sort="${this.data.sortColumn}"]`);
+                if (headerCell) {
+                    const icon = headerCell.querySelector('.sort-icon');
+                    if (icon) {
+                        icon.className = `sort-icon sort-${this.data.sortDirection}`;
+                    }
+                }
+            }
+        },
+        
+        // 페이지네이션 렌더링
+        renderPagination: function() {
+            const pagination = document.getElementById('pagination');
+            
+            if (this.data.pageSize === 'All' || this.data.totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            const currentPage = this.data.currentPage;
+            const totalPages = this.data.totalPages;
+            
+            // 이전 버튼
+            html += `
+                <button class="page-btn ${currentPage <= 1 ? 'disabled' : ''}" 
+                        onclick="FlListModule.goToPage(${currentPage - 1})" 
+                        ${currentPage <= 1 ? 'disabled' : ''}>‹</button>
+            `;
+            
+            // 페이지 번호들
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+            
+            if (startPage > 1) {
+                html += `<button class="page-btn" onclick="FlListModule.goToPage(1)">1</button>`;
+                if (startPage > 2) {
+                    html += `<span style="padding: 0 5px;">...</span>`;
+                }
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                html += `
+                    <button class="page-btn ${i === currentPage ? 'active' : ''}" 
+                            onclick="FlListModule.goToPage(${i})">${i}</button>
+                `;
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    html += `<span style="padding: 0 5px;">...</span>`;
+                }
+                html += `<button class="page-btn" onclick="FlListModule.goToPage(${totalPages})">${totalPages}</button>`;
+            }
+            
+            // 다음 버튼
+            html += `
+                <button class="page-btn ${currentPage >= totalPages ? 'disabled' : ''}" 
+                        onclick="FlListModule.goToPage(${currentPage + 1})" 
+                        ${currentPage >= totalPages ? 'disabled' : ''}>›</button>
+            `;
+            
+            pagination.innerHTML = html;
+        },
+        
+        // 페이지 이동
+        goToPage: function(page) {
+            if (page < 1 || page > this.data.totalPages || page === this.data.currentPage) {
+                return;
+            }
+            
+            this.data.currentPage = page;
+            this.loadFloorData('search');
+        },
+        
+        // 카운트 정보 업데이트
+        updateCountInfo: function() {
+            document.getElementById('total_count').textContent = this.data.totalCount.toLocaleString();
+            document.getElementById('current_page').textContent = this.data.currentPage;
+            document.getElementById('total_pages').textContent = this.data.totalPages;
+        },
+        
+        // 필터 초기화
+        resetFilters: function() {
+            document.getElementById('bl_select').value = '';
+            document.getElementById('search_keyword').value = '';
+            
+            this.data.currentPage = 1;
+            this.data.sortColumn = null;
+            this.data.sortDirection = 'both';
+            
+            this.updateSortIcons();
+            this.loadFloorData('read');
+            
+            console.log('🔄 필터 초기화 완료');
+        },
+        
+        // 로딩 표시
+        showLoading: function() {
+            const tableContent = document.getElementById('table_content');
+            tableContent.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    층 정보를 불러오는 중...
+                </div>
+            `;
+        },
+        
+        // 오류 표시
+        showError: function(message) {
+            const tableContent = document.getElementById('table_content');
+            tableContent.innerHTML = `
+                <div class="empty-message" style="color: #dc3545;">
+                    ${message}
+                </div>
+            `;
+            console.error('🔴 층정보 오류:', message);
+        }
+    };
+    
+    // 전역 초기화 함수 등록
+    window.initializeFlList = function() {
+        window.FlListModule.init();
+    };
+    
+    // 자동 초기화 (즉시 실행)
+    setTimeout(() => {
+        if (!window.FlListModule.data.isInitialized) {
+            console.log('🏢 FlList 자동 초기화 시작');
+            window.FlListModule.init();
+        }
+    }, 500);
+    
+    console.log('🏢 FlListModule 로드 완료');
+    
+})(); // 즉시 실행 함수 끝
+</script>

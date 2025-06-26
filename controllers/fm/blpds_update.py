@@ -8,15 +8,26 @@ from werkzeug.utils import secure_filename
 
 blpds_update_bp = Blueprint('blpds_update', __name__)
 
+def safe_int(value):
+    """값을 안전하게 정수로 변환"""
+    try:
+        if value is None:
+            return None
+        # float이든 string이든 일단 float으로 변환 후 int로 변환
+        return int(float(value))
+    except (ValueError, TypeError):
+        return None
 @blpds_update_bp.route('/blpds_update/get_data', methods=['POST'])
 @login_required
 def get_data():
     """건물 이력 상세 데이터 조회"""
     try:
         request_data = request.get_json()
-        auto_number = request_data.get('auto_number')
+        # POST JSON body에서 auto_number 가져오기 (URL 파라미터가 아님)
+        auto_number_param = request_data.get('auto_number')
         bl_id = request_data.get('bl_id')
         
+        auto_number = safe_int(auto_number_param)
         print(f"🏢 blpds_update 데이터 조회 요청: auto_number={auto_number}, bl_id={bl_id}")
         
         if not auto_number:
@@ -37,13 +48,15 @@ def get_data():
             else:
                 has_permission = True  # bl_id가 없으면 일단 허용
             
-            # 이력 데이터 조회
+            # 이력 데이터 조회 + 등록자 이름 추가
             sql = text("""
                 SELECT pds.auto_number, pds.bl_id, pds.title, pds.contents, 
-                       pds.em_name as reg_man_name, pds.reg_man,
+                       pds.reg_man,
+                       em.name as reg_man_name,
                        DATE_FORMAT(pds.reg_date, '%Y-%m-%d %H:%i:%s') as reg_date,
                        pds.filename, pds.maskname, pds.filetype
                 FROM blpds pds
+                LEFT JOIN em ON pds.reg_man = em.em_id
                 WHERE pds.auto_number = :auto_number
             """)
             
@@ -64,6 +77,7 @@ def get_data():
     except Exception as e:
         print(f"🏢 blpds_update 데이터 조회 오류: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
+
 
 @blpds_update_bp.route('/blpds_update/save_data', methods=['POST'])
 @login_required
@@ -191,9 +205,10 @@ def delete_data():
 @blpds_update_bp.route('/blpds_update/download_file')
 @login_required
 def download_file():
-    """첨부파일 다운로드"""
+    """첨부파일 다운로드 (JSP 방식 호환)"""
     try:
-        auto_number = request.args.get('auto_number')
+        auto_number_param = request.args.get('auto_number')
+        auto_number = safe_int(auto_number_param)
         
         if not auto_number:
             return jsonify({'success': False, 'message': 'auto_number가 필요합니다.'})
@@ -207,18 +222,23 @@ def download_file():
             
             result = conn.execute(sql, {"auto_number": auto_number}).fetchone()
             
-            if result and result['filename']:
-                # 실제 파일 경로 구성 (환경에 따라 수정 필요)
-                file_path = f"/path/to/files/{result['maskname'] or result['filename']}"
+            if result and result['maskname']:
+                file_data = dict(result)
                 
-                # 파일이 존재하는지 확인
-                if os.path.exists(file_path):
+                # ⭐ bl_pds 절대 경로에서 파일 찾기
+                bl_pds_file_path = os.path.join(BL_PDS_PATH, file_data['maskname'])
+                
+                print(f"🏢 다운로드 요청: {file_data['filename']}")
+                print(f"🏢 파일 경로: {bl_pds_file_path}")
+                
+                if os.path.exists(bl_pds_file_path):
                     return send_file(
-                        file_path, 
+                        bl_pds_file_path, 
                         as_attachment=True, 
-                        download_name=result['filename']
+                        download_name=file_data['filename']
                     )
                 else:
+                    print(f"🔴 다운로드 파일 없음: {bl_pds_file_path}")
                     return jsonify({'success': False, 'message': '파일을 찾을 수 없습니다.'})
             else:
                 return jsonify({'success': False, 'message': '첨부파일이 없습니다.'})
@@ -227,40 +247,67 @@ def download_file():
         print(f"🏢 파일 다운로드 오류: {str(e)}")
         return jsonify({'success': False, 'message': str(e)})
 
+
+BL_PDS_PATH = r"C:\Users\USER04\Documents\python_fms_hiddenframe\upload\bl_pds"
 @blpds_update_bp.route('/blpds_update/view_file')
 @login_required
 def view_file():
-    """이미지 파일 보기"""
+    auto_number_param = request.args.get('auto_number')
+    auto_number = safe_int(auto_number_param)
+
+    print(f"🏢 [blpds_update] view_file 폴백 엔드포인트 호출: auto_number={auto_number}")
+
+    if not auto_number:
+        print("🔴 auto_number가 없음")
+        return send_file('static/images/common/no_image.png')
+    
     try:
-        auto_number = request.args.get('auto_number')
-        
-        if not auto_number:
-            return jsonify({'success': False, 'message': 'auto_number가 필요합니다.'})
-        
         with engine.connect() as conn:
             sql = text("""
                 SELECT filename, maskname, filetype
                 FROM blpds 
-                WHERE auto_number = :auto_number AND filetype = '1'
+                WHERE auto_number = :auto_number
             """)
             
             result = conn.execute(sql, {"auto_number": auto_number}).fetchone()
             
             if result and result['maskname']:
-                # 실제 이미지 파일 경로 구성
-                file_path = f"/path/to/images/{result['maskname']}"
+                file_data = dict(result)
+                maskname = file_data['maskname']
                 
-                if os.path.exists(file_path):
-                    return send_file(file_path)
+                # ⭐ bl_pds 절대 경로에서 파일 찾기
+                bl_pds_file_path = os.path.join(BL_PDS_PATH, maskname)
+                
+                print(f"🏢 [blpds_update] 폴백에서 파일 경로 확인: {bl_pds_file_path}")
+                
+                if os.path.exists(bl_pds_file_path):
+                    print(f"✅ 파일 찾음: {bl_pds_file_path}")
+                    
+                    file_ext = maskname.lower().split('.')[-1]
+                    mimetype_map = {
+                        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+                        'gif': 'image/gif', 'bmp': 'image/bmp', 'webp': 'image/webp',
+                        'svg': 'image/svg+xml'
+                    }
+                    
+                    mimetype = mimetype_map.get(file_ext, 'image/jpeg')
+                    
+                    return send_file(
+                        bl_pds_file_path,
+                        mimetype=mimetype,
+                        as_attachment=False,
+                        download_name=file_data['filename']
+                    )
                 else:
-                    # 기본 이미지 반환
-                    return send_file('/static/images/common/no_image.png')
+                    print(f"🔴 파일 없음: {bl_pds_file_path}")
+                    return send_file('static/images/common/no_image.png')
             else:
-                return send_file('/static/images/common/no_image.png')
+                print("🔴 데이터베이스에 파일 정보 없음")
+                return send_file('static/images/common/no_image.png')
                 
     except Exception as e:
-        print(f"🏢 이미지 보기 오류: {str(e)}")
-        return send_file('/static/images/common/no_image.png')
+        print(f"🔴 [blpds_update] 폴백 엔드포인트 오류: {str(e)}")
+        return send_file('static/images/common/no_image.png')
 
 @blpds_update_bp.route('/blpds_update/set_default_photo', methods=['POST'])
 @login_required
@@ -309,4 +356,65 @@ def set_default_photo():
             
     except Exception as e:
         print(f"🏢 기본사진 설정 오류: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}) 
+        return jsonify({'success': False, 'message': str(e)})  
+    
+@blpds_update_bp.route('/blpds_update/debug_file/<int:auto_number>')
+@login_required
+def debug_file(auto_number):
+    """파일 존재 여부 디버깅"""
+    try:
+        with engine.connect() as conn:
+            sql = text("""
+                SELECT auto_number, filename, maskname, filetype, title
+                FROM blpds 
+                WHERE auto_number = :auto_number
+            """)
+            
+            result = conn.execute(sql, {"auto_number": auto_number}).fetchone()
+            
+            debug_info = {
+                'auto_number': auto_number,
+                'database_record': dict(result) if result else None,
+                'current_directory': os.getcwd(),
+                'file_checks': [],
+                'uploads_directory_exists': False,
+                'uploads_files': []
+            }
+            
+            if result:
+                maskname = result['maskname']
+                if maskname:
+                    # 여러 경로 확인
+                    possible_paths = [
+                        os.path.join('static', 'uploads', maskname),
+                        os.path.join('uploads', maskname),
+                        maskname,
+                        os.path.join(os.getcwd(), 'static', 'uploads', maskname)
+                    ]
+                    
+                    for path in possible_paths:
+                        exists = os.path.exists(path)
+                        size = os.path.getsize(path) if exists else 0
+                        debug_info['file_checks'].append({
+                            'path': path,
+                            'exists': exists,
+                            'size': size
+                        })
+            
+            # uploads 디렉토리 확인
+            uploads_dir = os.path.join('static', 'uploads')
+            if os.path.exists(uploads_dir):
+                debug_info['uploads_directory_exists'] = True
+                try:
+                    files = os.listdir(uploads_dir)[:20]  # 최대 20개
+                    debug_info['uploads_files'] = files
+                except:
+                    debug_info['uploads_files'] = ['읽기 오류']
+            
+            return jsonify(debug_info)
+            
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'auto_number': auto_number
+        })

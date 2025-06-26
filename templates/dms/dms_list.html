@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>도면정보관리</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <style>
+        /* dms_list 스타일 - JSP 원본 기반 */
+        #dms_list_outer {
+            padding: 20px;
+            padding-bottom: 0;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            font-size: 12px;
+        }
+
+        /* 상단 영역 */
+        #dms_list_outer .top-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        #dms_list_outer .top-area .left-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        #dms_list_outer .top-area label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #495057;
+            white-space: nowrap;
+        }
+
+        #dms_list_outer .top-area select {
+            height: 32px;
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+            min-width: 140px;
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+
+        #dms_list_outer .top-area input[type="text"] {
+            height: 32px;
+            padding: 0 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            min-width: 200px;
+            font-size: 12px;
+        }
+
+        #dms_list_outer .top-area button {
+            height: 32px;
+            padding: 0 12px;
+            background: #fff;
+            color: #333;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+            margin-left: 5px;
+        }
+
+        #dms_list_outer .top-area button:hover {
+            background-color: #e9ecef;
+            border-color: #adb5bd;
+        }
+        
+        #dms_list_outer .top-area button.btn-primary {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        #dms_list_outer .top-area button.btn-primary:hover {
+            background: #0056b3;
+            border-color: #004085;
+        }
+
+        /* 메인 영역 */
+        #dms_list_outer .main-area {
+            background-color: white;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+            padding: 20px;
+            height: calc(100vh - 200px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 데이터 테이블 영역 */
+        #dms_list_outer .data-table-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #dms_list_outer .data-table {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+
+        #dms_list_outer .data-table .table-header {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            font-weight: bold;
+            font-size: 12px;
+            height: 40px;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        #dms_list_outer .data-table .table-header .header-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            border-right: 1px solid #dee2e6;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        #dms_list_outer .data-table .table-header .header-cell:hover {
+            background-color: #e9ecef;
+        }
+
+        #dms_list_outer .data-table .table-header .header-cell:last-child {
+            border-right: none;
+        }
+
+        #dms_list_outer .data-table .sort-icon {
+            position: absolute;
+            right: 8px;
+            width: 12px;
+            height: 12px;
+            cursor: pointer;
+        }
+
+        #dms_list_outer .data-table .sort-both::after { 
+            content: '⇅'; 
+            color: #999; 
+            font-size: 10px;
+        }
+        #dms_list_outer .data-table .sort-asc::after { 
+            content: '▲'; 
+            color: #007bff; 
+            font-size: 8px;
+        }
+        #dms_list_outer .data-table .sort-desc::after { 
+            content: '▼'; 
+            color: #007bff; 
+            font-size: 8px;
+        }
+
+        #dms_list_outer .data-table .table-content {
+            display: block;
+        }
+
+        #dms_list_outer .data-table .table-row {
+            display: flex;
+            border-bottom: 1px solid #dee2e6;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            min-height: 36px;
+            align-items: center;
+        }
+
+        #dms_list_outer .data-table .table-row:hover {
+            background-color: #f8f9fa;
+        }
+
+        #dms_list_outer .data-table .table-row.selected {
+            background-color: #e3f2fd;
+            border-left: 3px solid #2196f3;
+        }
+
+        #dms_list_outer .data-table .table-cell {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border-right: 1px solid #dee2e6;
+            font-size: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        #dms_list_outer .data-table .table-cell:last-child {
+            border-right: none;
+        }
+
+        #dms_list_outer .data-table .text-center { justify-content: center; }
+        #dms_list_outer .data-table .text-left { justify-content: flex-start; }
+        #dms_list_outer .data-table .text-right { justify-content: flex-end; }
+
+        /* 컬럼 너비 설정 */
+        #dms_list_outer .data-table .col-no { width: 5%; }
+        #dms_list_outer .data-table .col-blueprint { width: 30%; }
+        #dms_list_outer .data-table .col-attachment { width: 15%; }
+        #dms_list_outer .data-table .col-property { width: 15%; }
+        #dms_list_outer .data-table .col-building { width: 15%; }
+        #dms_list_outer .data-table .col-date { width: 10%; }
+        #dms_list_outer .data-table .col-author { width: 10%; }
+
+        /* 빈 데이터 메시지 */
+        #dms_list_outer .data-table .empty-message {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100px;
+            color: #6c757d;
+            font-size: 14px;
+            border-bottom: none;
+        }
+
+        /* 페이지네이션 영역 */
+        #dms_list_outer .pagination-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #dee2e6;
+            flex-shrink: 0;
+        }
+
+        #dms_list_outer .pagination-area .pagination-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #dms_list_outer .pagination-area label {
+            font-size: 12px;
+            color: #495057;
+            white-space: nowrap;
+        }
+
+        #dms_list_outer .pagination-area select {
+            width: 80px;
+            height: 32px;
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+            font-size: 12px;
+        }
+
+        #dms_list_outer .pagination-area .page-info {
+            font-size: 12px;
+            color: #495057;
+        }
+
+        #dms_list_outer .pagination-area .page-info .highlight {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        #dms_list_outer .pagination {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        #dms_list_outer .pagination .page-btn {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #dee2e6;
+            background: white;
+            color: #495057;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.15s ease;
+        }
+
+        #dms_list_outer .pagination .page-btn:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+
+        #dms_list_outer .pagination .page-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        #dms_list_outer .pagination .page-btn.disabled {
+            background: #f8f9fa;
+            color: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        #dms_list_outer .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        #dms_list_outer .loading .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 첨부파일 링크 스타일 */
+        .attachment-link {
+            color: #007bff;
+            text-decoration: none;
+            margin-right: 5px;
+        }
+
+        .attachment-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div id="dms_list_outer">
+        <div class="top-area">
+            <div class="left-section">
+                <label for="dms_bl_select">건물:</label>
+                <select id="dms_bl_select">
+                    <option value="">--건물명(코드)--</option>
+                </select>
+
+                <label for="dms_fl_select">층:</label>
+                <select id="dms_fl_select">
+                    <option value="">--층전체--</option>
+                </select>
+
+                <label for="dms_search_keyword">검색:</label>
+                <input type="text" id="dms_search_keyword" placeholder="도면명, 작성자">
+            </div>
+            <div class="right-section">
+                <button type="button" id="dms_btn_search">검색</button>
+                <button type="button" id="dms_btn_reset">초기화</button>
+                <button type="button" id="dms_btn_register" class="btn-primary">등록</button>
+            </div>
+        </div>
+
+        <div class="main-area">
+            <div class="data-table-wrapper">
+                <div class="data-table">
+                    <div class="table-header">
+                        <div class="header-cell col-no text-center" data-sort="dms_id">
+                            <span>번호</span>
+                            <div class="sort-icon sort-both"></div>
+                        </div>
+                        <div class="header-cell col-blueprint text-center" data-sort="contents">
+                            <span>도면명</span>
+                            <div class="sort-icon sort-both"></div>
+                        </div>
+                        <div class="header-cell col-attachment text-center">
+                            <span>첨부파일</span>
+                        </div>
+                        <div class="header-cell col-property text-center" data-sort="prop_name">
+                            <span>사업장</span>
+                            <div class="sort-icon sort-both"></div>
+                        </div>
+                        <div class="header-cell col-building text-center" data-sort="bl_name">
+                            <span>건물</span>
+                            <div class="sort-icon sort-both"></div>
+                        </div>
+                        <div class="header-cell col-date text-center" data-sort="date_reg">
+                            <span>작성일</span>
+                            <div class="sort-icon sort-both"></div>
+                        </div>
+                        <div class="header-cell col-author text-center" data-sort="em_name">
+                            <span>작성자</span>
+                            <div class="sort-icon sort-both"></div>
+                        </div>
+                    </div>
+
+                    <div class="table-content" id="dms_table_content">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            데이터를 불러오는 중...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pagination-area">
+                    <div class="pagination-left">
+                        <label for="dms_page_size">페이지당 목록 수:</label>
+                        <select id="dms_page_size">
+                            <option value="10">10</option>
+                            <option value="18" selected>18</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+
+                    <div class="pagination" id="dms_pagination">
+                    </div>
+
+                    <div class="page-info">
+                        전체 <span class="highlight" id="dms_total_count">0</span>개 | 
+                        <span class="highlight" id="dms_current_page">1</span> / 
+                        <span class="highlight" id="dms_total_pages">1</span> 페이지
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+        
+        console.log('🏢 dms_list.html 스크립트 시작!');
+        
+        if (typeof window.DmsListModule !== 'undefined') {
+            console.log('🏢 기존 DmsListModule 완전 제거');
+            if (window.DmsListModule.cleanup && typeof window.DmsListModule.cleanup === 'function') {
+                window.DmsListModule.cleanup();
+            }
+            delete window.DmsListModule;
+        }
+        
+        window.DmsListModule = {
+            data: {
+                currentPage: 1,
+                totalPages: 1,
+                totalCount: 0,
+                pageSize: 18,
+                sortColumn: null,
+                sortDirection: 'both',
+                dataList: [],
+                blList: [],
+                flList: [],
+                isInitialized: false,
+                lastClickTime: 0,
+                lastClickKey: null,
+                moduleId: 'dms_list_' + Date.now()
+            },
+            
+            safeGetElement: function(id) {
+                try {
+                    const element = document.getElementById(id);
+                    if (!element) {
+                        console.warn('🏢 [DMS] DOM 요소를 찾을 수 없음:', id);
+                    }
+                    return element;
+                } catch (error) {
+                    console.error('🏢 [DMS] DOM 접근 오류:', error);
+                    return null;
+                }
+            },
+
+            init: function() {
+                console.log('🏢 [DMS] 도면정보 목록 페이지 초기화 시작');
+                
+                const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                const prop_id = window.currentPropId;
+                
+                if (!em_id) {
+                    console.error('🏢 [DMS] em_id가 없습니다.');
+                    this.showError('사용자 정보를 불러올 수 없습니다.');
+                    return;
+                }
+                
+                if (!prop_id) {
+                    console.error('🏢 [DMS] prop_id가 없습니다.');
+                    this.showError('사업장을 선택해주세요.');
+                    return;
+                }
+                
+                this.data.isInitialized = true;
+                this.bindEvents();
+                this.loadBuildingList();
+                this.loadData('read');
+            },
+            
+            bindEvents: function() {
+                const btnSearch = this.safeGetElement('dms_btn_search');
+                if (btnSearch) {
+                    btnSearch.onclick = () => {
+                        this.data.currentPage = 1;
+                        this.loadData('search');
+                    };
+                }
+                
+                const searchInput = this.safeGetElement('dms_search_keyword');
+                if (searchInput) {
+                    searchInput.onkeypress = (e) => {
+                        if (e.key === 'Enter') {
+                            this.data.currentPage = 1;
+                            this.loadData('search');
+                        }
+                    };
+                }
+                
+                const btnReset = this.safeGetElement('dms_btn_reset');
+                if (btnReset) {
+                    btnReset.onclick = () => {
+                        this.resetFilters();
+                    };
+                }
+
+                const btnRegister = this.safeGetElement('dms_btn_register');
+                if (btnRegister) {
+                    btnRegister.onclick = () => {
+                        if (window.tabManager && typeof window.tabManager.addTab === 'function') {
+                            window.tabManager.addTab('/dms/dms_insert.html', '도면정보 등록');
+                        } else {
+                            window.location.href = '/dms/dms_insert.html';
+                        }
+                    };
+                }
+                
+                // 건물 선택 변경
+                const blSelect = this.safeGetElement('dms_bl_select');
+                if (blSelect) {
+                    blSelect.onchange = () => {
+                        this.loadFloorList(blSelect.value);
+                        this.data.currentPage = 1;
+                        this.loadData('search');
+                    };
+                }
+
+                // 층 선택 변경
+                const flSelect = this.safeGetElement('dms_fl_select');
+                if (flSelect) {
+                    flSelect.onchange = () => {
+                        this.data.currentPage = 1;
+                        this.loadData('search');
+                    };
+                }
+                
+                const pageSizeSelect = this.safeGetElement('dms_page_size');
+                if (pageSizeSelect) {
+                    pageSizeSelect.onchange = () => {
+                        this.data.currentPage = 1;
+                        this.data.pageSize = pageSizeSelect.value;
+                        this.loadData('search');
+                    };
+                }
+                
+                const container = document.getElementById('dms_list_outer');
+                if (container) {
+                    const headers = container.querySelectorAll('.header-cell[data-sort]');
+                    headers.forEach(header => {
+                        header.onclick = () => {
+                            const sortColumn = header.dataset.sort;
+                            this.handleSort(sortColumn);
+                        };
+                    });
+                }
+                
+                console.log('🏢 [DMS] 이벤트 리스너 등록 완료');
+            },
+
+            // 건물 목록 로드
+            loadBuildingList: function() {
+                const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                const prop_id = window.currentPropId;
+                
+                fetch('fm/dms_list/get_bl_list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ em_id: em_id, prop_id: prop_id })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.success) {
+                        this.data.blList = data.data || [];
+                        this.renderBuildingSelect(data.data || []);
+                    }
+                })
+                .catch(error => {
+                    console.error('🏢 [DMS] 건물 목록 로드 오류:', error);
+                });
+            },
+
+            // 건물 선택 옵션 렌더링
+            renderBuildingSelect: function(buildings) {
+                const select = this.safeGetElement('dms_bl_select');
+                if (!select) return;
+                select.innerHTML = '<option value="">--건물명(코드)--</option>';
+                
+                buildings.forEach(building => {
+                    const option = document.createElement('option');
+                    option.value = building.bl_id;
+                    option.textContent = `${building.bl_name}(${building.bl_id})`;
+                    select.appendChild(option);
+                });
+            },
+
+            // 층 목록 로드
+            loadFloorList: function(blId) {
+                const prop_id = window.currentPropId;
+                const flSelect = this.safeGetElement('dms_fl_select');
+                if (!flSelect) return;
+                
+                flSelect.innerHTML = '<option value="">--층전체--</option>';
+                this.data.flList = [];
+
+                if (!prop_id || !blId) return;
+
+                fetch('fm/dms_list/get_fl_list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prop_id: prop_id, bl_id: blId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.success) {
+                        this.data.flList = data.data || [];
+                        this.renderFloorSelect(data.data || []);
+                    }
+                })
+                .catch(error => {
+                    console.error('🏢 [DMS] 층 목록 로드 오류:', error);
+                });
+            },
+
+            // 층 선택 옵션 렌더링
+            renderFloorSelect: function(floors) {
+                const select = this.safeGetElement('dms_fl_select');
+                if (!select) return;
+                select.innerHTML = '<option value="">--층전체--</option>';
+                
+                floors.forEach(floor => {
+                    const option = document.createElement('option');
+                    option.value = floor.fl_id;
+                    option.textContent = floor.fl_name;
+                    select.appendChild(option);
+                });
+            },
+            
+            loadData: function(mode = 'read') {
+                const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                const prop_id = window.currentPropId;
+                
+                if (!em_id || !prop_id) {
+                    console.warn('🏢 [DMS] 필수 파라미터 누락:', { em_id, prop_id });
+                    this.showError('사용자 정보 또는 사업장 정보가 없습니다.');
+                    return;
+                }
+                
+                this.showLoading();
+                
+                const requestData = {
+                    em_id: em_id,
+                    prop_id: prop_id,
+                    page_size: this.data.pageSize,
+                    page_number: this.data.currentPage
+                };
+                
+                // 검색 조건 추가
+                const keywordInput = this.safeGetElement('dms_search_keyword');
+                if (keywordInput && keywordInput.value.trim()) {
+                    requestData.keyword = keywordInput.value.trim();
+                }
+
+                const blSelect = this.safeGetElement('dms_bl_select');
+                if (blSelect && blSelect.value) {
+                    requestData.bl_id = blSelect.value;
+                }
+
+                const flSelect = this.safeGetElement('dms_fl_select');
+                if (flSelect && flSelect.value) {
+                    requestData.fl_id = flSelect.value;
+                }
+                
+                if (this.data.sortColumn && this.data.sortDirection !== 'both') {
+                    requestData.sort_column = this.data.sortColumn;
+                    requestData.sort_direction = this.data.sortDirection;
+                }
+                
+                console.log('🏢 [DMS] 데이터 요청:', requestData);
+                
+                fetch('fm/dms_list/get_data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🏢 [DMS] 데이터 응답:', data);
+                    if (data && data.success) {
+                        this.data.dataList = data.result_data || [];
+                        this.data.currentPage = data.current_page || 1;
+                        this.data.totalPages = data.total_pages || 1;
+                        this.data.totalCount = data.total_count || 0;
+                        
+                        this.renderTable(this.data.dataList);
+                        this.renderPagination();
+                        this.updateCountInfo();
+                        
+                        console.log('🏢 [DMS] 데이터 로드 완료:', (this.data.dataList || []).length, '개');
+                    } else {
+                        console.error('🏢 [DMS] 데이터 로드 실패:', data ? data.message : 'Unknown error');
+                        this.showError(`데이터를 불러올 수 없습니다: ${data ? data.message : 'Unknown error'}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('🏢 [DMS] 데이터 로드 오류:', error);
+                    this.showError(`데이터를 불러오는 중 오류가 발생했습니다: ${error.message}`);
+                });
+            },
+            
+            renderTable: function(dataList) {
+                const tableContent = this.safeGetElement('dms_table_content');
+                if (!tableContent) return;
+
+                if (!dataList || dataList.length === 0) {
+                    tableContent.innerHTML = `
+                        <div class="empty-message">
+                            검색 결과가 없습니다.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = '';
+                
+                dataList.forEach(item => {
+                    // 첨부파일 링크 생성
+                    let attachmentHtml = '';
+                    if (item.attachments && item.attachments.length > 0) {
+                        item.attachments.forEach((file, index) => {
+                            attachmentHtml += `<a href="fm/dms_list/download?dms_id=${item.dms_id}&file_id=${file.dms_image_id}" 
+                                                  class="attachment-link" title="${file.filename}">[${index + 1}]</a>`;
+                        });
+                    }
+
+                    html += `
+                        <div class="table-row" 
+                            data-id="${item.dms_id || ''}"
+                            onclick="DmsListModule.selectItem(this)">
+                            <div class="table-cell col-no text-center">${parseInt(item.dms_id) || ''}</div>
+                            <div class="table-cell col-blueprint text-left" title="${item.contents || ''}">${item.contents || ''}</div>
+                            <div class="table-cell col-attachment text-center">${attachmentHtml}</div>
+                            <div class="table-cell col-property text-center" title="${item.prop_name || ''}(${item.prop_id || ''})">${item.prop_name || ''}(${item.prop_id || ''})</div>
+                            <div class="table-cell col-building text-center" title="${item.bl_name || ''}(${item.bl_id || ''})">${item.bl_name ? `${item.bl_name}(${item.bl_id})` : ''}</div>
+                            <div class="table-cell col-date text-center">${item.date_reg || ''}</div>
+                            <div class="table-cell col-author text-center">${item.em_name || ''}</div>
+                        </div>
+                    `;
+                });
+                
+                tableContent.innerHTML = html;
+            },
+            
+            selectItem: function(element) {
+                const itemId = element.dataset.id;
+                
+                if (!itemId) {
+                    console.log('🔴 [DMS] ID가 없습니다.');
+                    return;
+                }
+                
+                const clickKey = `item_${itemId}`;
+                if (this.data.lastClickKey === clickKey && (Date.now() - this.data.lastClickTime) < 1000) {
+                    console.log('🟡 [DMS] 중복 클릭 방지');
+                    return;
+                }
+                
+                this.data.lastClickKey = clickKey;
+                this.data.lastClickTime = Date.now();
+                
+                console.log('🔵 [DMS] 항목 선택됨:', { itemId });
+                
+                const container = document.getElementById('dms_list_outer');
+                if (container) {
+                    container.querySelectorAll('.table-row').forEach(row => {
+                        row.classList.remove('selected');
+                    });
+                }
+                element.classList.add('selected');
+                
+                this.navigateToUpdate(itemId);
+            },
+            
+
+            navigateToUpdate: function(itemId) {
+                try {
+                    const cleanId = parseInt(parseFloat(itemId));
+                    window.selected_dms_id = cleanId;
+                    
+                    console.log('🟢 [DMS] dms_update로 이동:', { itemId: cleanId });
+                    
+                    if (window.tabManager && typeof window.tabManager.addTab === 'function') {
+                        const url = `/dms/dms_update.html?dms_id=${cleanId}`;
+                        const title = `도면수정(${cleanId})`;
+                        
+                        // 🔥 기존 dms_update 탭들을 모두 제거
+                        if (window.tabManager.tabs instanceof Map) {
+                            const tabsToRemove = [];
+                            for (const [tabId, tab] of window.tabManager.tabs.entries()) {
+                                if (tabId.includes('dms_update') || 
+                                    (tab.url && tab.url.includes('dms_update.html'))) {
+                                    tabsToRemove.push(tabId);
+                                }
+                            }
+                            
+                            // 찾은 탭들을 모두 제거
+                            tabsToRemove.forEach(tabId => {
+                                if (typeof window.tabManager.removeTab === 'function') {
+                                    window.tabManager.removeTab(tabId);
+                                }
+                            });
+                        }
+                        
+                        // 약간의 지연 후 새 탭 생성
+                        setTimeout(() => {
+                            window.tabManager.addTab(url, title);
+                        }, 200);
+                        
+                    } else if (typeof window.loadContent === 'function') {
+                        const url = `/dms/dms_update.html?dms_id=${cleanId}`;
+                        window.loadContent(url, `도면수정(${cleanId})`);
+                        
+                    } else {
+                        console.error('🔴 [DMS] 탭 생성 함수를 찾을 수 없습니다.');
+                    }
+                    
+                } catch (error) {
+                    console.error('🔴 [DMS] dms_update 이동 중 오류:', error);
+                }
+            },
+            
+            handleSort: function(column) {
+                if (this.data.sortColumn === column) {
+                    if (this.data.sortDirection === 'both') {
+                        this.data.sortDirection = 'asc';
+                    } else if (this.data.sortDirection === 'asc') {
+                        this.data.sortDirection = 'desc';
+                    } else {
+                        this.data.sortDirection = 'both';
+                    }
+                } else {
+                    this.data.sortColumn = column;
+                    this.data.sortDirection = 'asc';
+                }
+                
+                this.updateSortIcons();
+                this.data.currentPage = 1;
+                this.loadData('search');
+                
+                console.log('🔄 [DMS] 정렬 변경:', { column, direction: this.data.sortDirection });
+            },
+            
+            updateSortIcons: function() {
+                const container = document.getElementById('dms_list_outer');
+                if (!container) return;
+                
+                container.querySelectorAll('.sort-icon').forEach(icon => {
+                    icon.className = 'sort-icon sort-both';
+                });
+                
+                if (this.data.sortColumn) {
+                    const headerCell = container.querySelector(`[data-sort="${this.data.sortColumn}"]`);
+                    if (headerCell) {
+                        const icon = headerCell.querySelector('.sort-icon');
+                        if (icon) {
+                            icon.className = `sort-icon sort-${this.data.sortDirection}`;
+                        }
+                    }
+                }
+            },
+            
+            renderPagination: function() {
+                const pagination = this.safeGetElement('dms_pagination');
+                if (!pagination) return;
+                
+                if (this.data.totalPages <= 1) {
+                    pagination.innerHTML = '';
+                    return;
+                }
+                
+                let html = '';
+                
+                // 이전 페이지
+                if (this.data.currentPage > 1) {
+                    html += `<div class="page-btn" onclick="DmsListModule.goToPage(${this.data.currentPage - 1})">◀</div>`;
+                } else {
+                    html += `<div class="page-btn disabled">◀</div>`;
+                }
+                
+                // 페이지 번호들
+                const startPage = Math.max(1, this.data.currentPage - 5);
+                const endPage = Math.min(this.data.totalPages, startPage + 9);
+                
+                for (let i = startPage; i <= endPage; i++) {
+                    if (i === this.data.currentPage) {
+                        html += `<div class="page-btn active">${i}</div>`;
+                    } else {
+                        html += `<div class="page-btn" onclick="DmsListModule.goToPage(${i})">${i}</div>`;
+                    }
+                }
+                
+                // 다음 페이지
+                if (this.data.currentPage < this.data.totalPages) {
+                    html += `<div class="page-btn" onclick="DmsListModule.goToPage(${this.data.currentPage + 1})">▶</div>`;
+                } else {
+                    html += `<div class="page-btn disabled">▶</div>`;
+                }
+                
+                pagination.innerHTML = html;
+            },
+            
+            goToPage: function(page) {
+                if (page < 1 || page > this.data.totalPages || page === this.data.currentPage) {
+                    return;
+                }
+                
+                this.data.currentPage = page;
+                this.loadData('search');
+            },
+            
+            updateCountInfo: function() {
+                const totalCountElem = this.safeGetElement('dms_total_count');
+                const currentPageElem = this.safeGetElement('dms_current_page');
+                const totalPagesElem = this.safeGetElement('dms_total_pages');
+
+                if (totalCountElem) totalCountElem.textContent = this.data.totalCount.toLocaleString();
+                if (currentPageElem) currentPageElem.textContent = this.data.currentPage;
+                if (totalPagesElem) totalPagesElem.textContent = this.data.totalPages;
+            },
+            
+            resetFilters: function() {
+                const searchInput = this.safeGetElement('dms_search_keyword');
+                const pageSizeSelect = this.safeGetElement('dms_page_size');
+                const blSelect = this.safeGetElement('dms_bl_select');
+                const flSelect = this.safeGetElement('dms_fl_select');
+
+                if (searchInput) searchInput.value = '';
+                if (pageSizeSelect) pageSizeSelect.value = '18';
+                if (blSelect) blSelect.value = '';
+                if (flSelect) flSelect.value = '';
+
+                this.data.currentPage = 1;
+                this.data.pageSize = 18;
+                this.data.sortColumn = null;
+                this.data.sortDirection = 'both';
+                
+                this.updateSortIcons();
+                this.loadData('read');
+                
+                console.log('🔄 [DMS] 필터 초기화 완료');
+            },
+            
+            showLoading: function() {
+                const tableContent = this.safeGetElement('dms_table_content');
+                if (!tableContent) return;
+                tableContent.innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        데이터를 불러오는 중...
+                    </div>
+                `;
+            },
+            
+            showError: function(message) {
+                const tableContent = this.safeGetElement('dms_table_content');
+                if (!tableContent) return;
+                tableContent.innerHTML = `
+                    <div class="empty-message" style="color: #dc3545;">
+                        ${message}
+                    </div>
+                `;
+                console.error('🔴 [DMS] 오류:', message);
+            },
+            
+            cleanup: function() {
+                console.log('🏢 [DMS] DmsListModule 정리 중...');
+                this.data.isInitialized = false;
+            }
+        };
+        
+        window.initializeDmsList = function() {
+            window.DmsListModule.init();
+        };
+        
+        setTimeout(() => {
+            if (!window.DmsListModule.data.isInitialized) {
+                console.log('🏢 [DMS] DMS List 자동 초기화 시작');
+                window.DmsListModule.init();
+            } else {
+                console.log('🏢 [DMS] DMS List 이미 초기화됨');
+            }
+        }, 100);
+        
+        console.log('🏢 [DMS] DmsListModule 로드 완료');
+        
+    })();
+    </script>
+</body>
+</html>

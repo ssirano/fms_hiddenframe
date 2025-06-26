@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}Python_FMS{% endblock %}</title>
+    <title>{% block title %}통합시설관리시스템{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/common.css') }}">
     {% block extra_css %}{% endblock %}
@@ -154,8 +154,10 @@
             
             // 탭 ID 생성
             generateTabId: function(url) {
-                return 'tab_' + url.replace(/[^a-zA-Z0-9]/g, '_');
+                const cleanUrl = url.split('?')[0];
+                return 'tab_' + cleanUrl.replace(/[^a-zA-Z0-9]/g, '_');
             },
+
             
             // 탭 헤더 렌더링
             renderTabHeaders: function() {
@@ -457,9 +459,26 @@
                 }
                 const tab = this.tabs.get(this.activeTabId);
                 return tab.container && tab.container.style.display === 'block';
+            },
+            removeCurrentTab: function() {
+                if (this.activeTabId) {
+                    console.log('🗑️ 현재 활성 탭 닫기:', this.activeTabId);
+                    this.removeTab(this.activeTabId);
+                }
             }
         };
         
+        window.waitForUserInfo = function(callback, retry = 10) {
+            if (window.userInfo && window.userInfo.em_id && window.userInfo.prop_id) {
+                callback(window.userInfo);
+            } else if (retry > 0) {
+                setTimeout(() => window.waitForUserInfo(callback, retry - 1), 200);
+            } else {
+                console.error('❗ 사용자 정보를 가져오는 데 실패했습니다.');
+                alert('시스템 오류: 사용자 정보를 불러올 수 없습니다.');
+            }
+        };
+
         // 사용자 정보 로드
         window.loadUserInfo = function() {
             return fetch('/common/get_user_info', {
@@ -712,15 +731,28 @@
         window.clickModule = function(element) {
             const moduleId = element.dataset.moduleId;
             const moduleTitle = element.textContent.trim();
-            
+
             // 모든 모듈 메뉴 비활성화
             document.querySelectorAll('.module-item').forEach(m => m.classList.remove('active'));
             element.classList.add('active');
-            
+
             window.currentModule = moduleId;
             window.loadModuleMenus(moduleId, moduleTitle);
             window.showStatus(`${moduleTitle} 모듈이 선택되었습니다.`);
+
+            // ⭐ 사이드바 자동 열기 + 고정
+            const sidebarFrame = document.getElementById('sidebarFrame');
+            const sidebarPinButton = document.getElementById('sidebarPin');
+
+            if (sidebarFrame && !window.sidebarPinned) {
+                sidebarFrame.classList.remove('hidden');
+                window.sidebarPinned = true;
+                sidebarPinButton.classList.add('pinned');
+                sidebarPinButton.textContent = '📌';
+            }
         };
+
+
         
         // 하위 메뉴 클릭 함수 (HiddenFrame 전용)
         window.clickMenu = function(element) {

@@ -426,9 +426,6 @@
             <li class="nav-item">
                 <a class="nav-link" href="#" data-tab="3" onclick="BlUpdateModule.showTab(3, this)">건물이력</a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" href="#" data-tab="4" onclick="BlUpdateModule.showTab(4, this)">사진</a>
-            </li>
         </ul>
     </div>
 
@@ -640,7 +637,7 @@
         <!-- 탭 3: 건물이력 -->
         <div id="tab3_content" class="tab-content">
             <div class="search-area">
-                <select id="history_type" onchange="BlUpdateModule.loadHistoryData()">
+                <select id="history_type" onchange="BlUpdateModule.loadHistoryData(); BlUpdateModule.toggleFileViewer();">
                     <option value="2">이력관리</option>
                     <option value="3">파일관리</option>
                 </select>
@@ -652,20 +649,35 @@
                 <button type="button" id="btn_history_register" onclick="BlUpdateModule.registerHistory()">등록</button>
             </div>
             
-            <div class="data-table">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th width="55%">제목</th>
-                            <th width="15%">등록자</th>
-                            <th width="15%">등록일자</th>
-                            <th width="15%">파일</th>
-                        </tr>
-                    </thead>
-                    <tbody id="history_table_body">
-                        <tr><td colspan="4" class="text-center">이력 데이터를 불러오는 중...</td></tr>
-                    </tbody>
-                </table>
+            <div style="display: flex; gap: 15px;">
+                <div class="data-table" style="flex: 1;">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th width="55%">제목</th>
+                                <th width="15%">등록자</th>
+                                <th width="15%">등록일자</th>
+                                <th width="15%">파일</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history_table_body">
+                            <tr><td colspan="4" class="text-center">이력 데이터를 불러오는 중...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 파일 뷰어 영역 (파일관리 선택시에만 표시) -->
+                <div id="file_viewer_area" class="photo-viewer" style="display: none; position: relative; right: auto; top: auto; width: 300px; height: 400px;">
+                    <div class="photo-title" id="file_title">파일을 선택하세요</div>
+                    <div class="photo-display">
+                        <div id="file_preview" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                            <div class="no-image">파일 없음</div>
+                        </div>
+                    </div>
+                    <!--<div class="photo-controls" style="margin-top: 10px;">
+                        <button type="button" onclick="BlUpdateModule.downloadSelectedFile()">다운로드</button>
+                    </div>-->
+                </div>
             </div>
         </div>
 
@@ -747,9 +759,17 @@
         init: function() {
             console.log('🏢 건물수정 페이지 초기화 시작');
             
-            if (this.data.isInitialized) {
-                console.log('🏢 이미 초기화됨');
+            const new_bl_id = window.selected_bl_id;
+            if (this.data.isInitialized && this.data.currentBlId === new_bl_id) {
+                console.log('🏢 동일한 건물로 이미 초기화됨');
                 return;
+            }
+
+            // 새로운 건물이면 재초기화
+            if (new_bl_id && this.data.currentBlId !== new_bl_id) {
+                console.log('🏢 새로운 건물로 재초기화:', new_bl_id);
+                this.data.isInitialized = false;
+                this.data.currentBlId = null;
             }
             
             const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
@@ -846,6 +866,16 @@
             } else {
                 this.clearForm();
             }
+        },
+        forceRefresh: function(blId) {
+            console.log('🏢 강제 새로고침 실행:', blId);
+            
+            this.data.isInitialized = false;
+            this.data.currentBlId = null;
+            window.selected_bl_id = blId;
+            
+            // 건물 데이터 다시 로드
+            this.loadBlData(blId);
         },
         
         // 건물 데이터 로드
@@ -957,6 +987,127 @@
                 areaTotalPyeongInput.value = pyeong > 0 ? pyeong.toFixed(2) : '';
             }
         },
+        // BlUpdateModule 객체 내에 추가
+        toggleFileViewer: function() {
+            const historyType = document.getElementById('history_type').value;
+            const fileViewerArea = document.getElementById('file_viewer_area');
+            
+            if (historyType === '3') { // 파일관리
+                fileViewerArea.style.display = 'block';
+            } else {
+                fileViewerArea.style.display = 'none';
+            }
+        },
+
+        selectHistoryFile: function(data) {
+            const fileTitle = document.getElementById('file_title');
+            const filePreview = document.getElementById('file_preview');
+
+            fileTitle.textContent = data.title || '제목 없음';
+            filePreview.innerHTML = '';  // ⭐ 기존 내용 완전 초기화
+
+            if (data.filename && data.maskname) {
+                const extension = data.filename.split('.').pop().toLowerCase();
+                const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
+
+                if (imageExtensions.includes(extension)) {
+                    const imageUrl = `/bl_pds/${data.maskname}`;
+
+                    console.log('🏢 [bl_update] 이미지 파일 처리 - URL:', imageUrl);
+
+                    const img = document.createElement('img');
+                    img.src = imageUrl;
+                    img.alt = '이미지';
+                    img.style.maxWidth = '100%';
+                    img.style.maxHeight = '100%';
+                    img.style.objectFit = 'contain';
+                    img.onload = function() {
+                        console.log('✅ [bl_update] 이미지 로드 성공:', imageUrl);
+                        console.log('✅ [bl_update] 이미지 크기:', img.naturalWidth + 'x' + img.naturalHeight);
+                    };
+                    img.onerror = function() {
+                        console.log('🔴 [bl_update] 이미지 로드 실패:', imageUrl);
+                        filePreview.innerHTML = '<div style="text-align: center; color: #999;">이미지를 불러올 수 없습니다<br>📷</div>';
+                    };
+
+                    filePreview.appendChild(img);
+                } else {
+                    const fileIcon = this.getFileIcon(extension);
+                    filePreview.innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <div style="font-size: 48px; margin-bottom: 10px;">${fileIcon}</div>
+                            <div style="font-size: 12px; color: #666; word-break: break-word;">${data.filename}</div>
+                            <div style="font-size: 11px; color: #999; margin-top: 5px;">${extension.toUpperCase()} 파일</div>
+                            <div style="font-size: 10px; color: #999; margin-top: 5px;">실제파일: ${data.maskname}</div>
+                        </div>`;
+                }
+            } else {
+                console.log('🔴 [bl_update] filename 또는 maskname 없음');
+                filePreview.innerHTML = '<div style="text-align: center; color: #999;">파일 없음</div>';
+            }
+
+            this.selectedFileData = {
+                ...data,
+                auto_number: parseInt(data.auto_number, 10)
+            };
+
+            console.log('🏢 [bl_update] 파일 선택 완료:', this.selectedFileData);
+        },
+
+        testBl_PdsFileFromBlUpdate: function(maskname) {
+            if (!maskname) return;
+            
+            console.log('🧪 [bl_update] bl_pds 파일 테스트 시작:', maskname);
+            
+            // 파일 존재 여부 확인
+            fetch(`/debug/check_bl_pds_file/${maskname}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('🔍 [bl_update] bl_pds 파일 체크 결과:', data);
+                })
+                .catch(error => {
+                    console.error('🔴 [bl_update] bl_pds 파일 체크 실패:', error);
+                });
+        },
+
+
+        // 파일 아이콘 반환 함수 (새로 추가)
+        getFileIcon: function(extension) {
+            const iconMap = {
+                'pdf': '📄',
+                'doc': '📝', 'docx': '📝',
+                'xls': '📊', 'xlsx': '📊',
+                'ppt': '📋', 'pptx': '📋',
+                'txt': '📃',
+                'zip': '🗜️', 'rar': '🗜️', '7z': '🗜️',
+                'mp4': '🎬', 'avi': '🎬', 'mov': '🎬',
+                'mp3': '🎵', 'wav': '🎵',
+                'default': '📁'
+            };
+            return iconMap[extension.toLowerCase()] || iconMap['default'];
+        },
+
+
+        downloadSelectedFile: function() {
+            if (this.selectedFileData && this.selectedFileData.auto_number) {
+                // 정수로 변환된 auto_number 사용
+                const autoNumber = parseInt(this.selectedFileData.auto_number, 10);
+                const downloadUrl = `/fm/bl_update/view_file?auto_number=${autoNumber}`;
+                
+                // 다운로드를 위한 임시 링크 생성
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = this.selectedFileData.filename || 'file';
+                link.target = '_blank';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                console.log('🏢 파일 다운로드:', downloadUrl);
+            } else {
+                alert('다운로드할 파일을 선택해주세요.');
+            }
+        },
         
         // 탭 전환
         showTab: function(tabNumber, element) {
@@ -995,12 +1146,20 @@
             const dateEnd = document.getElementById('history_date_end').value;
             const keyword = document.getElementById('history_search').value;
             
+            // 파일관리 선택시 이미지(1)와 파일(3) 모두 조회
+            let typeParam;
+            if (historyType === '3') {
+                typeParam = 'file_all';  // 파일관리 전용 플래그
+            } else {
+                typeParam = historyType;  // 기존대로
+            }
+            
             fetch('/fm/bl_update/get_history_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     bl_id: this.data.currentBlId,
-                    type: historyType,
+                    type: typeParam,
                     date_start: dateStart,
                     date_end: dateEnd,
                     keyword: keyword
@@ -1008,10 +1167,13 @@
             })
             .then(response => response.json())
             .then(data => {
+                console.log('🏢 이력 데이터 응답:', data);
+                
                 if (data.success) {
+                    this.data.historyData = data.data;
                     this.renderHistoryTable(data.data);
                 } else {
-                    this.showHistoryError('이력 데이터를 불러올 수 없습니다.');
+                    this.showHistoryError('이력 데이터를 불러올 수 없습니다: ' + data.message);
                 }
             })
             .catch(error => {
@@ -1030,19 +1192,49 @@
             }
             
             let html = '';
+            const historyType = document.getElementById('history_type').value;
+
             data.forEach(item => {
+                const safeItem = {
+                    auto_number: item.auto_number || 0,
+                    title: (item.title || '').replace(/'/g, "\\'").replace(/"/g, '\\"'),
+                    filename: (item.filename || '').replace(/'/g, "\\'").replace(/"/g, '\\"'),
+                    maskname: (item.maskname || '').replace(/'/g, "\\'").replace(/"/g, '\\"'),  
+                    reg_man_name: (item.reg_man_name || '').replace(/'/g, "\\'").replace(/"/g, '\\"'),
+                    reg_date: item.reg_date || ''
+                };
+
+
+                let clickEvent = `BlUpdateModule.openHistoryDetail(${safeItem.auto_number}, '${this.data.currentBlId}', '${historyType}')`;
+                
+                // 파일관리인 경우 selectHistoryFile 먼저 실행
+                if (historyType === '3' || historyType === 'file_all') {
+                    const selectEvent = `BlUpdateModule.selectHistoryFile(${JSON.stringify(safeItem).replace(/"/g, '&quot;')})`;
+                    clickEvent = `${selectEvent}; ${clickEvent}`;
+                }
+                
+                // 파일 아이콘 표시 개선
+                let fileIcon = '';
+                if (item.filename) {
+                    const extension = item.filename.split('.').pop().toLowerCase();
+                    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
+                    fileIcon = imageExtensions.includes(extension) ? '🖼️' : '📁';
+                }
+                
                 html += `
-                    <tr onclick="BlUpdateModule.openHistoryDetail(${item.auto_number || 0}, '${this.data.currentBlId}', '${item.type || '2'}')" style="cursor: pointer;">
-                        <td style="text-align:left; padding-left:5px;">${item.title || ''}</td>
-                        <td style="text-align:center;">${item.reg_man_name || item.reg_man || ''}</td>
-                        <td style="text-align:center;">${item.reg_date || ''}</td>
-                        <td style="text-align:center;">${item.filename ? '📁' : ''}</td>
-                    </tr>
-                `;
+                <tr style="cursor: pointer;">
+                    <td style="text-align:left; padding-left:5px;" onclick="${clickEvent}">${item.title || ''}</td>
+                    <td style="text-align:center;" onclick="${clickEvent}">${item.reg_man_name || item.reg_man || ''}</td>
+                    <td style="text-align:center;" onclick="${clickEvent}">${item.reg_date || ''}</td>
+                    <td style="text-align:center;" onclick="BlUpdateModule.selectHistoryFile(${JSON.stringify(safeItem).replace(/"/g, '&quot;')})">${fileIcon}</td>
+                </tr>
+            `;
             });
+
             
             tbody.innerHTML = html;
         },
+
             
         
         // 사진 데이터 로드
@@ -1242,10 +1434,70 @@
                 return;
             }
             
-            const downloadUrl = `/fm/bl_update/export_excel?bl_id=${this.data.currentBlId}`;
-            window.open(downloadUrl, '_blank');
+            console.log('📊 엑셀 내보내기 시작');
             
-            this.showSuccess('엑셀 파일을 다운로드합니다.');
+            // 현재 폼의 모든 데이터 수집
+            const formData = this.collectFormData();
+            formData.bl_id = this.data.currentBlId;
+            formData.em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+            
+            // 건물명 추가 (파일명용)
+            const blNameElement = document.getElementById('name');
+            const blName = blNameElement ? blNameElement.value : '건물정보';
+            formData.bl_name = blName;
+            
+            // 이력 데이터도 포함할지 확인
+            const includeHistory = confirm('건물 이력 정보도 엑셀에 포함하시겠습니까?\n\n예: 건물정보 + 이력정보\n아니오: 건물정보만');
+            
+            // 엑셀 생성 요청
+            const exportBtn = document.getElementById('btn_excel');
+            const originalText = exportBtn.textContent;
+            exportBtn.textContent = '엑셀 생성 중...';
+            exportBtn.disabled = true;
+            
+            // POST 요청으로 변경하여 상세 데이터 전송
+            fetch('/fm/bl_update/export_excel_detailed', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...formData,
+                    include_history: includeHistory
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                } else {
+                    throw new Error('엑셀 생성 실패');
+                }
+            })
+            .then(blob => {
+                // 파일 다운로드
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                
+                const currentDate = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+                const fileName = `건물정보_${blName}_${currentDate}.xlsx`;
+                link.download = fileName;
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+                
+                this.showSuccess(`엑셀 파일이 다운로드되었습니다: ${fileName}`);
+                console.log('📊 엑셀 다운로드 완료:', fileName);
+            })
+            .catch(error => {
+                console.error('📊 엑셀 내보내기 오류:', error);
+                alert('엑셀 내보내기 중 오류가 발생했습니다: ' + error.message);
+            })
+            .finally(() => {
+                // 버튼 복원
+                exportBtn.textContent = originalText;
+                exportBtn.disabled = false;
+            });
         },
         
         // 인쇄
@@ -1255,7 +1507,350 @@
                 return;
             }
             
-            window.print();
+            console.log('🖨️ 데이터 포함 인쇄 시작');
+            
+            // 1. 인쇄할 메인 컨테이너 찾기
+            const blUpdateOuter = document.getElementById('bl_update_outer');
+            if (!blUpdateOuter) {
+                alert('인쇄할 컨텐츠를 찾을 수 없습니다.');
+                return;
+            }
+            
+            // 2. 현재 활성 탭과 상태 저장
+            const originalActiveTab = this.data.currentTab;
+            const allTabContents = blUpdateOuter.querySelectorAll('.tab-content');
+            const tabHeaders = document.querySelectorAll('.nav-link');
+            
+            // 건물개요(탭1)과 기타정보(탭2)만 가져오기
+            const tab1Content = document.getElementById('tab1_content');
+            const tab2Content = document.getElementById('tab2_content');
+            
+            if (!tab1Content || !tab2Content) {
+                alert('인쇄할 탭 컨텐츠를 찾을 수 없습니다.');
+                return;
+            }
+            
+            // 3. 모든 탭 상태 저장
+            const originalTabStates = [];
+            allTabContents.forEach(content => {
+                originalTabStates.push({
+                    element: content,
+                    display: content.style.display,
+                    classList: Array.from(content.classList)
+                });
+            });
+            
+            const originalHeaderStates = [];
+            tabHeaders.forEach(header => {
+                originalHeaderStates.push({
+                    element: header,
+                    classList: Array.from(header.classList)
+                });
+            });
+            
+            // 4. 건물명 가져오기
+            const blNameElement = tab1Content.querySelector('#name');
+            const blName = blNameElement ? blNameElement.value || '건물정보' : '건물정보';
+            
+            // 5. input 값을 텍스트로 변환하는 함수
+            const convertInputsToText = function(container) {
+                const clone = container.cloneNode(true);
+                
+                // 모든 input, select, textarea 요소 찾기
+                const inputs = clone.querySelectorAll('input, select, textarea');
+                
+                inputs.forEach(input => {
+                    let value = '';
+                    
+                    if (input.type === 'radio' || input.type === 'checkbox') {
+                        // 라디오버튼/체크박스인 경우
+                        if (input.checked) {
+                            // 체크된 항목의 라벨 텍스트 찾기
+                            const label = clone.querySelector(`label[for="${input.id}"]`) || 
+                                        input.closest('label') || 
+                                        input.nextElementSibling;
+                            value = label ? label.textContent.trim() : (input.value || '선택됨');
+                        } else {
+                            value = '';
+                        }
+                    } else if (input.tagName === 'SELECT') {
+                        // select 요소인 경우
+                        const selectedOption = input.options[input.selectedIndex];
+                        value = selectedOption ? selectedOption.textContent : input.value;
+                    } else {
+                        // 일반 input, textarea인 경우
+                        value = input.value || '';
+                    }
+                    
+                    // input 요소를 span으로 교체
+                    const span = document.createElement('span');
+                    span.textContent = value;
+                    span.style.cssText = `
+                        display: inline-block;
+                        min-height: 12px;
+                        padding: 1px 3px;
+                        border-bottom: 1px dotted #999;
+                        font-weight: normal;
+                        color: black;
+                    `;
+                    
+                    // 빈 값인 경우 최소 공간 확보
+                    if (!value.trim()) {
+                        span.innerHTML = '&nbsp;';
+                        span.style.borderBottom = '1px dotted #ccc';
+                    }
+                    
+                    input.parentNode.replaceChild(span, input);
+                });
+                
+                // 라디오버튼 그룹 처리
+                const radioGroups = {};
+                clone.querySelectorAll('input[type="radio"]').forEach(radio => {
+                    if (!radioGroups[radio.name]) {
+                        radioGroups[radio.name] = [];
+                    }
+                    radioGroups[radio.name].push(radio);
+                });
+                
+                // 각 라디오 그룹에서 체크된 항목만 표시
+                Object.keys(radioGroups).forEach(groupName => {
+                    const radios = radioGroups[groupName];
+                    let checkedValue = '';
+                    
+                    radios.forEach(radio => {
+                        if (radio.checked) {
+                            const label = radio.closest('label') || radio.nextElementSibling;
+                            checkedValue = label ? label.textContent.replace(radio.value, '').trim() : radio.value;
+                        }
+                    });
+                    
+                    // 라디오 그룹 전체를 하나의 span으로 교체
+                    if (radios.length > 0) {
+                        const firstRadio = radios[0];
+                        const container = firstRadio.closest('td') || firstRadio.parentNode;
+                        
+                        // 기존 라디오 버튼들과 라벨들 제거
+                        radios.forEach(radio => {
+                            const label = radio.closest('label');
+                            if (label) label.remove();
+                            else radio.remove();
+                        });
+                        
+                        // 선택된 값을 표시하는 span 추가
+                        const span = document.createElement('span');
+                        span.textContent = checkedValue || '선택되지 않음';
+                        span.style.cssText = `
+                            display: inline-block;
+                            padding: 1px 3px;
+                            border-bottom: 1px dotted #999;
+                            font-weight: normal;
+                            color: black;
+                        `;
+                        container.appendChild(span);
+                    }
+                });
+                
+                return clone;
+            };
+            
+            // 6. 인쇄용 컨테이너 생성
+            const printContainer = document.createElement('div');
+            printContainer.id = 'print-only-container';
+            printContainer.style.cssText = 'position: absolute; top: -9999px; left: -9999px; width: 100%; background: white;';
+            
+            // 7. 인쇄용 헤더 생성
+            const printHeader = `
+                <div style="text-align: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #333;">
+                    <h1 style="margin: 0; font-size: 20px; font-weight: bold; color: black;">건물 정보 상세</h1>
+                    <h2 style="margin: 10px 0 0 0; font-size: 16px; color: #333;">${blName}</h2>
+                    <p style="margin: 5px 0 0 0; font-size: 11px; color: #666;">출력일: ${new Date().toLocaleDateString('ko-KR')}</p>
+                </div>
+            `;
+            
+            // 8. 건물개요와 기타정보를 데이터와 함께 생성
+            let printContent = printHeader;
+            
+            // 건물개요 (탭1) - input 값을 텍스트로 변환
+            printContent += `
+                <div style="margin: 20px 0 12px 0;">
+                    <h3 style="margin: 0; padding-bottom: 5px; border-bottom: 1px solid #666; font-size: 14px; font-weight: bold; color: black;">
+                        ■ 건물 개요 정보
+                    </h3>
+                </div>
+            `;
+            
+            const tab1Converted = convertInputsToText(tab1Content);
+            // 불필요한 요소들 제거
+            const tab1ElementsToRemove = tab1Converted.querySelectorAll('script, .search-area, .photo-controls, button, .button-area');
+            tab1ElementsToRemove.forEach(el => el.remove());
+            printContent += tab1Converted.innerHTML;
+            
+            // 기타정보 (탭2) - input 값을 텍스트로 변환
+            printContent += `
+                <div style="margin: 25px 0 12px 0; page-break-before: avoid;">
+                    <h3 style="margin: 0; padding-bottom: 5px; border-bottom: 1px solid #666; font-size: 14px; font-weight: bold; color: black;">
+                        ■ 기타 정보
+                    </h3>
+                </div>
+            `;
+            
+            const tab2Converted = convertInputsToText(tab2Content);
+            // 불필요한 요소들 제거
+            const tab2ElementsToRemove = tab2Converted.querySelectorAll('script, .search-area, .photo-controls, button, .button-area');
+            tab2ElementsToRemove.forEach(el => el.remove());
+            printContent += tab2Converted.innerHTML;
+            
+            printContainer.innerHTML = printContent;
+            document.body.appendChild(printContainer);
+            
+            // 9. 인쇄용 스타일 생성
+            const printStyle = document.createElement('style');
+            printStyle.id = 'print-only-style';
+            printStyle.textContent = `
+                @media print {
+                    @page {
+                        margin: 12mm;
+                        size: A4;
+                    }
+                    
+                    /* 기존 모든 요소 숨김 */
+                    body > *:not(#print-only-container) {
+                        display: none !important;
+                        visibility: hidden !important;
+                    }
+                    
+                    /* 인쇄 컨테이너만 표시 */
+                    #print-only-container {
+                        position: static !important;
+                        top: auto !important;
+                        left: auto !important;
+                        width: 100% !important;
+                        height: auto !important;
+                        background: white !important;
+                        color: black !important;
+                        font-family: Arial, sans-serif !important;
+                        font-size: 9pt !important;
+                        line-height: 1.3 !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        display: block !important;
+                        visibility: visible !important;
+                    }
+                    
+                    /* 페이지 나누기 방지 */
+                    #print-only-container * {
+                        page-break-inside: avoid !important;
+                    }
+                    
+                    /* 테이블 스타일 */
+                    #print-only-container .form-table {
+                        width: 100% !important;
+                        border-collapse: collapse !important;
+                        margin-bottom: 8px !important;
+                        font-size: 8pt !important;
+                    }
+                    
+                    #print-only-container .form-table td {
+                        border: 0.5pt solid #333 !important;
+                        padding: 3pt 5pt !important;
+                        font-size: 8pt !important;
+                        vertical-align: top !important;
+                        line-height: 1.2 !important;
+                    }
+                    
+                    #print-only-container .form-table .label {
+                        background: #f8f8f8 !important;
+                        font-weight: bold !important;
+                        text-align: center !important;
+                        width: 15% !important;
+                    }
+                    
+                    /* 변환된 텍스트 스타일 */
+                    #print-only-container span {
+                        color: black !important;
+                        font-size: 8pt !important;
+                        font-weight: normal !important;
+                        background: transparent !important;
+                    }
+                    
+                    /* 제목 스타일 */
+                    #print-only-container h1 {
+                        font-size: 16pt !important;
+                        margin: 0 !important;
+                    }
+                    
+                    #print-only-container h2 {
+                        font-size: 13pt !important;
+                        margin: 6px 0 !important;
+                    }
+                    
+                    #print-only-container h3 {
+                        font-size: 11pt !important;
+                        margin: 12px 0 6px 0 !important;
+                    }
+                }
+            `;
+            document.head.appendChild(printStyle);
+            
+            // 10. 페이지 제목 설정
+            const originalTitle = document.title;
+            document.title = `${blName} - 건물정보상세`;
+            
+            // 11. 인쇄 실행
+            setTimeout(() => {
+                try {
+                    window.print();
+                    console.log('🖨️ 데이터 포함 인쇄 다이얼로그 열림');
+                } catch (error) {
+                    console.error('🖨️ 인쇄 오류:', error);
+                    alert('인쇄 중 오류가 발생했습니다.');
+                }
+                
+                // 12. 인쇄 후 완전 복원
+                setTimeout(() => {
+                    // 인쇄용 요소들 제거
+                    const printContainer = document.getElementById('print-only-container');
+                    if (printContainer) printContainer.remove();
+                    
+                    const printStyle = document.getElementById('print-only-style');
+                    if (printStyle) printStyle.remove();
+                    
+                    // 페이지 제목 복원
+                    document.title = originalTitle;
+                    
+                    // 탭 상태 완전 복원
+                    originalTabStates.forEach(({element, display, classList}) => {
+                        element.style.display = display;
+                        element.className = '';
+                        classList.forEach(cls => element.classList.add(cls));
+                    });
+                    
+                    originalHeaderStates.forEach(({element, classList}) => {
+                        element.className = '';
+                        classList.forEach(cls => element.classList.add(cls));
+                    });
+                    
+                    // 모듈 데이터 재설정
+                    this.data.currentTab = originalActiveTab;
+                    document.getElementById('current_tab').value = originalActiveTab;
+                    
+                    // 정상적인 탭 전환으로 완전한 상태 복원
+                    setTimeout(() => {
+                        const originalTabHeader = document.querySelector(`[data-tab="${originalActiveTab}"]`);
+                        if (originalTabHeader) {
+                            this.showTab(originalActiveTab, originalTabHeader);
+                        } else {
+                            const tab1Header = document.querySelector('[data-tab="1"]');
+                            if (tab1Header) {
+                                this.showTab(1, tab1Header);
+                            }
+                        }
+                        
+                        console.log('🖨️ 데이터 포함 인쇄 완료 및 복원');
+                    }, 100);
+                    
+                }, 1000);
+            }, 300);
         },
         
         // 목록으로 이동
@@ -1266,14 +1861,491 @@
             }
         },
         
-        // 이력 등록
         registerHistory: function() {
-            alert('이력 등록 기능을 구현 중입니다.');
+            if (!this.data.currentBlId) {
+                alert('건물을 선택해주세요.');
+                return;
+            }
+            this.createInsertPopup('2'); // 텍스트 이력
         },
-        
-        // 사진 등록
+
         registerPhoto: function() {
-            alert('사진 등록 기능을 구현 중입니다.');
+            if (!this.data.currentBlId) {
+                alert('건물을 선택해주세요.');
+                return;
+            }
+            this.createInsertPopup('1'); // 이미지 이력
+        },
+
+        // 팝업 생성 및 열기 (새로 추가)
+        createInsertPopup: function(type) {
+            // 이미 팝업이 있으면 제거
+            const existingPopup = document.getElementById('blpds_insert_popup');
+            if (existingPopup) {
+                existingPopup.remove();
+            }
+            
+            // 팝업 HTML 생성
+            const popupHTML = this.getPopupHTML();
+            
+            // body에 추가
+            document.body.insertAdjacentHTML('beforeend', popupHTML);
+            
+            // 팝업 JavaScript 초기화
+            this.initializePopup(type);
+        },
+
+        // 팝업 HTML 반환 (새로 추가)
+        getPopupHTML: function() {
+            return `
+                <!-- 팝업 오버레이 -->
+                <div id="blpds_insert_popup" style="
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                    background-color: rgba(0, 0, 0, 0.5); z-index: 10000; display: block;">
+                    
+                    <div id="blpds_insert_content" style="
+                        position: absolute; top: 10%; left: 50%; transform: translateX(-50%);
+                        width: 800px; min-width: 600px; max-width: 95%; 
+                        background-color: white; border-radius: 8px;
+                        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); 
+                        max-height: 80vh; overflow: hidden; resize: both;
+                        border: 2px solid #007bff;">
+                        
+                        <!-- 팝업 헤더 (드래그 핸들) -->
+                        <div id="blpds_insert_header" style="
+                            background-color: #f8f9fa; padding: 15px 20px; border-bottom: 1px solid #dee2e6;
+                            border-radius: 6px 6px 0 0; display: flex; justify-content: space-between; 
+                            align-items: center; cursor: move; user-select: none;">
+                            
+                            <h3 id="popup_title" style="margin: 0; font-size: 16px; font-weight: bold; color: #495057;">
+                                건물이력 등록
+                            </h3>
+                            
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <button type="button" id="popup_maximize" style="
+                                    background: none; border: none; font-size: 16px; cursor: pointer; 
+                                    color: #6c757d; padding: 2px 6px;" title="최대화">⬜</button>
+                                <button type="button" id="blpds_insert_close" style="
+                                    background: none; border: none; font-size: 20px; cursor: pointer; 
+                                    color: #6c757d; padding: 2px 6px;" title="닫기">&times;</button>
+                            </div>
+                        </div>
+
+                        <!-- 팝업 내용 (스크롤 가능) -->
+                        <div id="blpds_insert_body" style="padding: 20px; overflow-y: auto; max-height: calc(80vh - 120px);">
+                            <form id="blpds_insert_form">
+                                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px;">
+                                    <tr>
+                                        <td style="padding: 8px; border: 1px solid #dee2e6; background-color: #f8f9fa; 
+                                            font-weight: bold; text-align: center; width: 15%; min-width: 80px;">제목</td>
+                                        <td style="padding: 8px; border: 1px solid #dee2e6; width: 35%;">
+                                            <input type="text" id="insert_title" name="title" placeholder="제목을 입력하세요" 
+                                                style="border: 1px solid #ced4da; border-radius: 4px; padding: 4px 6px; 
+                                                font-size: 12px; width: 100%;" required>
+                                        </td>
+                                        <td style="padding: 8px; border: 1px solid #dee2e6; background-color: #f8f9fa; 
+                                            font-weight: bold; text-align: center; width: 15%;">형식</td>
+                                        <td style="padding: 8px; border: 1px solid #dee2e6; width: 35%;">
+                                            <select id="insert_type" name="type" style="border: 1px solid #ced4da; 
+                                                border-radius: 4px; padding: 4px 6px; font-size: 12px; width: 100%;">
+                                                <option value="1">이미지 이력</option>
+                                                <option value="2">텍스트 이력</option>
+                                                <option value="3">파일 이력</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    
+                                    <!-- 파일 업로드 행 -->
+                                    <tr id="file_row">
+                                        <td style="padding: 8px; border: 1px solid #dee2e6; background-color: #f8f9fa; 
+                                            font-weight: bold; text-align: center;">
+                                            <span id="file_label">건물사진 첨부</span>
+                                        </td>
+                                        <td colspan="3" style="padding: 8px; border: 1px solid #dee2e6;">
+                                            <input type="file" id="insert_filename" name="filename" accept="image/*"
+                                                style="border: 1px solid #ced4da; border-radius: 4px; padding: 4px 6px; 
+                                                font-size: 12px; width: 100%;">
+                                            <div id="file_info" style="margin-top: 5px; font-size: 11px; color: #6c757d;"></div>
+                                        </td>
+                                    </tr>
+                                    
+                                    <!-- 내용 입력 -->
+                                    <tr>
+                                        <td style="padding: 8px; border: 1px solid #dee2e6; background-color: #f8f9fa; 
+                                            font-weight: bold; text-align: center; vertical-align: top;">내용</td>
+                                        <td colspan="3" style="padding: 8px; border: 1px solid #dee2e6;">
+                                            <textarea id="insert_contents" name="contents" rows="5" 
+                                                placeholder="내용을 입력하세요" style="border: 1px solid #ced4da; 
+                                                border-radius: 4px; padding: 4px 6px; font-size: 12px; width: 100%; 
+                                                resize: vertical; min-height: 80px;"></textarea>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <!-- 히든 필드들 -->
+                                <input type="hidden" id="insert_bl_id" name="bl_id" value="">
+                                <input type="hidden" id="insert_prop_id" name="prop_id" value="">
+                                <input type="hidden" id="insert_reg_man" name="reg_man" value="">
+                            </form>
+                        </div>
+
+                        <!-- 팝업 푸터 -->
+                        <div id="blpds_insert_footer" style="
+                            background-color: #f8f9fa; padding: 15px 20px; border-top: 1px solid #dee2e6;
+                            border-radius: 0 0 6px 6px; text-align: right;">
+                            
+                            <button type="button" id="popup_save_btn" style="
+                                margin-left: 5px; padding: 6px 12px; background: #007bff; color: white;
+                                border: 1px solid #007bff; font-size: 12px; border-radius: 4px; 
+                                cursor: pointer;">저장</button>
+                                
+                            <button type="button" id="popup_cancel_btn" style="
+                                margin-left: 5px; padding: 6px 12px; background: #fff; color: #333;
+                                border: 1px solid #ced4da; font-size: 12px; border-radius: 4px; 
+                                cursor: pointer;">취소</button>
+                        </div>
+                        
+                        <!-- 리사이즈 핸들 -->
+                        <div id="resize_handle" style="
+                            position: absolute; bottom: 0; right: 0; width: 20px; height: 20px;
+                            cursor: se-resize; background: linear-gradient(-45deg, transparent 40%, #ccc 40%, #ccc 60%, transparent 60%);
+                            border-radius: 0 0 6px 0;">
+                        </div>
+                    </div>
+                </div>
+            `;
+        },
+
+        // 팝업 JavaScript 초기화 (새로 추가)
+        initializePopup: function(type) {
+            const self = this;
+            
+            // 데이터 설정
+            document.getElementById('insert_bl_id').value = this.data.currentBlId || '';
+            document.getElementById('insert_prop_id').value = this.data.currentPropId || '';
+            document.getElementById('insert_reg_man').value = window.currentEmId || '';
+            
+            // 타입 설정
+            document.getElementById('insert_type').value = type;
+            this.updatePopupUI(type);
+            
+            // 팝업 제목 업데이트
+            let title = '건물이력 등록';
+            if (type === '1') title = '건물사진 등록';
+            else if (type === '2') title = '건물이력 등록';
+            else if (type === '3') title = '파일 등록';
+            document.getElementById('popup_title').textContent = title;
+            
+            // 이벤트 리스너 등록
+            document.getElementById('blpds_insert_close').onclick = function() {
+                self.closePopup();
+            };
+            
+            document.getElementById('popup_cancel_btn').onclick = function() {
+                self.closePopup();
+            };
+            
+            document.getElementById('popup_save_btn').onclick = function() {
+                self.savePopupData();
+            };
+            
+            document.getElementById('insert_type').onchange = function() {
+                self.updatePopupUI(this.value);
+            };
+            
+            // 최대화 버튼
+            document.getElementById('popup_maximize').onclick = function() {
+                self.toggleMaximize();
+            };
+            
+            // 파일 선택 시 정보 표시
+            document.getElementById('insert_filename').onchange = function() {
+                self.showFileInfo(this);
+            };
+            
+            // 오버레이 클릭으로 닫기
+            document.getElementById('blpds_insert_popup').onclick = function(event) {
+                if (event.target === this) {
+                    self.closePopup();
+                }
+            };
+            
+            // 드래그 기능 초기화
+            this.initializeDrag();
+            
+            // 리사이즈 기능 초기화
+            this.initializeResize();
+            
+            // ESC 키로 닫기
+            this.popupKeyHandler = function(event) {
+                if (event.key === 'Escape') {
+                    self.closePopup();
+                }
+            };
+            document.addEventListener('keydown', this.popupKeyHandler);
+            
+            // 제목 입력 필드에 포커스
+            setTimeout(() => {
+                document.getElementById('insert_title').focus();
+            }, 100);
+        },
+
+        // 드래그 기능 초기화 (새로 추가)
+        initializeDrag: function() {
+            const header = document.getElementById('blpds_insert_header');
+            const popup = document.getElementById('blpds_insert_content');
+            let isDragging = false;
+            let startX, startY, startLeft, startTop;
+            
+            header.onmousedown = function(e) {
+                if (e.target.tagName === 'BUTTON') return; // 버튼 클릭은 제외
+                
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                
+                const rect = popup.getBoundingClientRect();
+                startLeft = rect.left;
+                startTop = rect.top;
+                
+                document.onmousemove = function(e) {
+                    if (!isDragging) return;
+                    
+                    const newLeft = startLeft + (e.clientX - startX);
+                    const newTop = startTop + (e.clientY - startY);
+                    
+                    // 화면 경계 체크
+                    const maxLeft = window.innerWidth - popup.offsetWidth;
+                    const maxTop = window.innerHeight - popup.offsetHeight;
+                    
+                    popup.style.left = Math.max(0, Math.min(newLeft, maxLeft)) + 'px';
+                    popup.style.top = Math.max(0, Math.min(newTop, maxTop)) + 'px';
+                    popup.style.transform = 'none'; // transform 제거
+                };
+                
+                document.onmouseup = function() {
+                    isDragging = false;
+                    document.onmousemove = null;
+                    document.onmouseup = null;
+                };
+            };
+        },
+
+        // 리사이즈 기능 초기화 (새로 추가)
+        initializeResize: function() {
+            const popup = document.getElementById('blpds_insert_content');
+            const handle = document.getElementById('resize_handle');
+            let isResizing = false;
+            let startX, startY, startWidth, startHeight;
+            
+            handle.onmousedown = function(e) {
+                isResizing = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                startWidth = popup.offsetWidth;
+                startHeight = popup.offsetHeight;
+                
+                document.onmousemove = function(e) {
+                    if (!isResizing) return;
+                    
+                    const newWidth = startWidth + (e.clientX - startX);
+                    const newHeight = startHeight + (e.clientY - startY);
+                    
+                    // 최소/최대 크기 제한
+                    const minWidth = 600;
+                    const minHeight = 400;
+                    const maxWidth = window.innerWidth - 50;
+                    const maxHeight = window.innerHeight - 50;
+                    
+                    popup.style.width = Math.max(minWidth, Math.min(newWidth, maxWidth)) + 'px';
+                    popup.style.height = Math.max(minHeight, Math.min(newHeight, maxHeight)) + 'px';
+                    
+                    // 내용 영역 높이 조정
+                    const bodyHeight = popup.offsetHeight - 120; // 헤더+푸터 제외
+                    document.getElementById('blpds_insert_body').style.maxHeight = bodyHeight + 'px';
+                };
+                
+                document.onmouseup = function() {
+                    isResizing = false;
+                    document.onmousemove = null;
+                    document.onmouseup = null;
+                };
+            };
+        },
+
+        // 최대화/복원 토글 (새로 추가)
+        toggleMaximize: function() {
+            const popup = document.getElementById('blpds_insert_content');
+            const maximizeBtn = document.getElementById('popup_maximize');
+            
+            if (popup.getAttribute('data-maximized') === 'true') {
+                // 복원
+                popup.style.width = popup.getAttribute('data-original-width');
+                popup.style.height = popup.getAttribute('data-original-height');
+                popup.style.left = popup.getAttribute('data-original-left');
+                popup.style.top = popup.getAttribute('data-original-top');
+                popup.style.transform = popup.getAttribute('data-original-transform') || 'none';
+                popup.setAttribute('data-maximized', 'false');
+                maximizeBtn.innerHTML = '⬜';
+                maximizeBtn.title = '최대화';
+                
+                // 리사이즈 핸들 표시
+                document.getElementById('resize_handle').style.display = 'block';
+            } else {
+                // 최대화
+                popup.setAttribute('data-original-width', popup.style.width || '800px');
+                popup.setAttribute('data-original-height', popup.style.height || 'auto');
+                popup.setAttribute('data-original-left', popup.style.left || '50%');
+                popup.setAttribute('data-original-top', popup.style.top || '10%');
+                popup.setAttribute('data-original-transform', popup.style.transform || 'translateX(-50%)');
+                
+                popup.style.width = '95vw';
+                popup.style.height = '90vh';
+                popup.style.left = '2.5vw';
+                popup.style.top = '5vh';
+                popup.style.transform = 'none';
+                popup.setAttribute('data-maximized', 'true');
+                maximizeBtn.innerHTML = '🗗';
+                maximizeBtn.title = '복원';
+                
+                // 리사이즈 핸들 숨김
+                document.getElementById('resize_handle').style.display = 'none';
+            }
+            
+            // 내용 영역 높이 재조정
+            const bodyHeight = popup.offsetHeight - 120;
+            document.getElementById('blpds_insert_body').style.maxHeight = bodyHeight + 'px';
+        },
+
+        // 파일 정보 표시 (새로 추가)
+        showFileInfo: function(fileInput) {
+            const fileInfo = document.getElementById('file_info');
+            
+            if (fileInput.files && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                const size = (file.size / 1024 / 1024).toFixed(2); // MB
+                fileInfo.innerHTML = `선택된 파일: ${file.name} (${size} MB)`;
+                fileInfo.style.color = '#28a745';
+            } else {
+                fileInfo.innerHTML = '';
+            }
+        },
+
+        // 팝업 UI 업데이트 (새로 추가)
+        updatePopupUI: function(type) {
+            const fileRow = document.getElementById('file_row');
+            const fileLabel = document.getElementById('file_label');
+            const fileInput = document.getElementById('insert_filename');
+            const contentsTextarea = document.getElementById('insert_contents');
+            
+            if (type === '1') {
+                // 이미지 이력
+                fileRow.style.display = 'table-row';
+                fileLabel.textContent = '건물사진 첨부';
+                fileInput.accept = 'image/*';
+                contentsTextarea.rows = 5;
+            } else if (type === '2') {
+                // 텍스트 이력
+                fileRow.style.display = 'none';
+                contentsTextarea.rows = 15;
+            } else if (type === '3') {
+                // 파일 이력
+                fileRow.style.display = 'table-row';
+                fileLabel.textContent = '파일 첨부';
+                fileInput.accept = '*/*';
+                contentsTextarea.rows = 5;
+            }
+        },
+
+        // 팝업 닫기 (새로 추가)
+        closePopup: function() {
+            const popup = document.getElementById('blpds_insert_popup');
+            if (popup) {
+                popup.remove();
+            }
+            
+            // 키보드 이벤트 리스너 제거
+            if (this.popupKeyHandler) {
+                document.removeEventListener('keydown', this.popupKeyHandler);
+                this.popupKeyHandler = null;
+            }
+        },
+
+        // 팝업 데이터 저장 (새로 추가)
+        savePopupData: function() {
+            const title = document.getElementById('insert_title').value.trim();
+            const contents = document.getElementById('insert_contents').value.trim();
+            const blId = document.getElementById('insert_bl_id').value;
+            const type = document.getElementById('insert_type').value;
+            
+            // 유효성 검사
+            if (!title) {
+                alert('제목을 입력해주세요.');
+                document.getElementById('insert_title').focus();
+                return;
+            }
+            
+            if (type === '2' && !contents) {
+                alert('내용을 입력해주세요.');
+                document.getElementById('insert_contents').focus();
+                return;
+            }
+            
+            // FormData 생성
+            const formData = new FormData();
+            formData.append('bl_id', blId);
+            formData.append('title', title);
+            formData.append('contents', contents);
+            formData.append('type', type);
+            formData.append('reg_man', document.getElementById('insert_reg_man').value);
+            
+            // 파일 첨부 (type=1 또는 type=3인 경우)
+            if (type === '1' || type === '3') {
+                const fileInput = document.getElementById('insert_filename');
+                if (fileInput.files[0]) {
+                    formData.append('file', fileInput.files[0]);
+                }
+            }
+            
+            console.log('🏢 저장할 데이터:', Object.fromEntries(formData));
+            
+            // 저장 버튼 비활성화
+            const saveButton = document.getElementById('popup_save_btn');
+            const originalText = saveButton.textContent;
+            saveButton.textContent = '저장 중...';
+            saveButton.disabled = true;
+            
+            // 저장 요청
+            fetch('/fm/blpds_insert/save_data', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('저장이 완료되었습니다.');
+                    this.closePopup();
+                    
+                    // 이력 데이터 강제 새로고침
+                    setTimeout(() => {
+                        this.loadHistoryData();
+                        
+                        // 파일관리 타입인 경우 파일 뷰어도 업데이트
+                        this.toggleFileViewer();
+                    }, 500);
+                } else {
+                    alert('저장 실패: ' + (data.message || '알 수 없는 오류'));
+                }
+            })
+            .catch(error => {
+                console.error('🏢 저장 오류:', error);
+                alert('저장 중 오류가 발생했습니다.');
+            })
+            .finally(() => {
+                // 저장 버튼 복원
+                saveButton.textContent = originalText;
+                saveButton.disabled = false;
+            });
         },
         
         // 권한 UI 업데이트
@@ -1361,32 +2433,146 @@
             tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger">${message}</td></tr>`;
         },
         
-        // 이력 상세 열기 (blpds_update로 이동)
         openHistoryDetail: function(autoNumber, blId, type) {
-            console.log('🏢 이력 상세 열기:', { autoNumber, blId, type });
-            
-            if (!autoNumber || autoNumber === 0) {
-                alert('잘못된 이력 정보입니다.');
+            console.log('🏢 [bl_update] openHistoryDetail 호출 원본 값:', { autoNumber, blId, type });
+
+            // autoNumber를 정수로 변환하여 사용
+            const parsedAutoNumber = parseInt(autoNumber, 10);
+
+            if (isNaN(parsedAutoNumber) || parsedAutoNumber === 0) {
+                alert('잘못된 이력 정보입니다. autoNumber가 유효하지 않습니다.');
+                console.error('🏢 [bl_update] openHistoryDetail: 파싱된 autoNumber가 유효하지 않음:', parsedAutoNumber);
                 return;
             }
-            
-            // 전역 변수 설정 (blpds_update에서 사용)
-            window.selected_auto_number = autoNumber;
+
+            // 전역 변수 설정
+            window.selected_auto_number = parsedAutoNumber;
             window.selected_bl_id = blId || this.data.currentBlId;
             window.selected_file_type = type || '2';
+
+            // URL 쿼리 파라미터 생성: 정수형으로 전달
+            const queryParams = new URLSearchParams({
+                auto_number: parsedAutoNumber,
+                bl_id: blId || this.data.currentBlId,
+                type: type || '2',
+                prop_search: window.currentPropId
+            }).toString();
+
+            const urlWithParams = `/fm/blpds_update.html?${queryParams}`;
+            console.log('🏢 [bl_update] 이동할 URL (쿼리 파라미터 포함):', urlWithParams);
+
+            // 핵심: 기존 blpds_update 탭을 먼저 제거하고 새로 생성
+            if (window.tabManager && typeof window.tabManager.removeTab === 'function') {
+                // 기존 탭 ID 계산 (base.html의 generateTabId 로직과 동일)
+                const existingTabId = 'tab__fm_blpds_update_html';
+                
+                console.log('🏢 [bl_update] 기존 탭 제거 시도:', existingTabId);
+                window.tabManager.removeTab(existingTabId);
+                
+                // 짧은 지연 후 새 탭 생성
+                setTimeout(() => {
+                    console.log('🏢 [bl_update] 새 탭 생성:', urlWithParams);
+                    window.tabManager.addTab(urlWithParams, `건물이력상세(${parsedAutoNumber})`);
+                    
+                    if (window.showStatus) {
+                        window.showStatus(`건물이력 상세(${parsedAutoNumber})를 열었습니다.`);
+                    }
+                }, 100);
+                
+                return; // 성공적으로 처리됨
+            }
+
+            // Fallback: tabManager가 없거나 실패한 경우
+            console.log('🏢 [bl_update] tabManager 미사용, 직접 콘텐츠 로드 시도');
             
-            console.log('🏢 설정된 전역 변수:', {
-                selected_auto_number: window.selected_auto_number,
-                selected_bl_id: window.selected_bl_id,
-                selected_file_type: window.selected_file_type
-            });
+            // 현재 dynamic-content 영역의 모든 탭 컨테이너 찾기
+            const dynamicContent = document.getElementById('dynamic-content');
+            if (dynamicContent) {
+                // 기존 blpds_update 관련 탭 컨테이너 제거
+                const existingContainers = dynamicContent.querySelectorAll('[id*="blpds_update"], [id*="tab-container-tab__fm_blpds_update"]');
+                existingContainers.forEach(container => {
+                    console.log('🏢 [bl_update] 기존 컨테이너 제거:', container.id);
+                    container.remove();
+                });
+                
+                // 새 컨테이너 생성 및 콘텐츠 로드
+                const newContainer = document.createElement('div');
+                newContainer.id = `tab-container-${Date.now()}`;
+                newContainer.className = 'tab-container';
+                newContainer.style.cssText = 'display: block; width: 100%; height: 100%; overflow: auto; padding: 20px;';
+                
+                // 로딩 표시
+                newContainer.innerHTML = `
+                    <div style="text-align: center; padding: 50px;">
+                        <div class="spinner" style="margin: 0 auto 20px;"></div>
+                        <p>건물이력 상세(${parsedAutoNumber})를 불러오는 중...</p>
+                    </div>
+                `;
+                
+                // 기존 컨테이너들 숨기기
+                dynamicContent.querySelectorAll('.tab-container').forEach(container => {
+                    container.style.display = 'none';
+                });
+                
+                // 새 컨테이너 추가
+                dynamicContent.appendChild(newContainer);
+                
+                // 콘텐츠 로드
+                fetch('/common/load_container', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ menuUrl: urlWithParams })
+                })
+                .then(response => response.text())
+                .then(html => {
+                    newContainer.innerHTML = html;
+                    
+                    // 스크립트 실행
+                    setTimeout(() => {
+                        const scripts = newContainer.querySelectorAll('script');
+                        scripts.forEach(script => {
+                            const newScript = document.createElement('script');
+                            if (script.src) {
+                                newScript.src = script.src;
+                                newScript.async = false;
+                            } else {
+                                newScript.textContent = script.textContent;
+                            }
+                            script.parentNode.replaceChild(newScript, script);
+                        });
+                        
+                        console.log('🏢 [bl_update] 새 콘텐츠 로드 완료');
+                    }, 100);
+                })
+                .catch(error => {
+                    console.error('🏢 [bl_update] 콘텐츠 로드 실패:', error);
+                    newContainer.innerHTML = `
+                        <div style="text-align: center; padding: 50px;">
+                            <h3 style="color: #dc3545;">페이지를 불러올 수 없습니다</h3>
+                            <p style="color: #6c757d; margin: 20px 0;">URL: ${urlWithParams}</p>
+                            <button class="btn btn-primary" onclick="window.location.reload()">다시 시도</button>
+                        </div>
+                    `;
+                });
+                
+                if (window.showStatus) {
+                    window.showStatus(`건물이력 상세(${parsedAutoNumber})를 열었습니다.`);
+                }
+                
+                return; // 성공적으로 처리됨
+            }
+
+            //  새 창으로 열기
+            console.log('🏢 [bl_update] 모든 방법 실패, 새 창으로 열기');
+            const newWindow = window.open(urlWithParams, `history_detail_${parsedAutoNumber}`, 
+                'width=1200,height=800,scrollbars=yes,resizable=yes');
             
-            // blpds_update 탭으로 이동
-            if (typeof window.loadContent === 'function') {
-                window.loadContent('/fm/blpds_update.html', `건물이력상세(${autoNumber})`);
-                window.showStatus && window.showStatus('건물이력 상세 페이지를 열었습니다.');
+            if (newWindow) {
+                if (window.showStatus) {
+                    window.showStatus(`건물이력 상세(${parsedAutoNumber})를 새 창에서 열었습니다.`);
+                }
             } else {
-                console.error('🏢 loadContent 함수를 찾을 수 없습니다.');
+                alert('팝업이 차단되었습니다. 브라우저 설정을 확인해주세요.');
             }
         },
         
@@ -1403,7 +2589,7 @@
             data.forEach((item, index) => {
                 const mainIndicator = item.is_main_photo ? '<span class="main-photo-indicator">[메인]</span> ' : '';
                 html += `
-                    <tr onclick="BlUpdateModule.selectPhoto(${index})" ondblclick="BlUpdateModule.openHistoryDetail(${item.auto_number || 0}, '${this.data.currentBlId}', '1')" style="cursor: pointer;">
+                    <tr onclick="BlUpdateModule.selectPhoto(${index})" ondblclick="BlUpdateModule.openHistoryDetail(${item.auto_number || int }, '${this.data.currentBlId}', '1')" style="cursor: pointer;">
                         <td style="text-align:left; padding-left:5px;">${mainIndicator}${item.title || ''}</td>
                         <td style="text-align:center;">${item.reg_man_name || item.reg_man || ''}</td>
                         <td style="text-align:center;">${item.reg_date || ''}</td>

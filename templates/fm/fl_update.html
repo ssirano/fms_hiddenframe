@@ -1,0 +1,893 @@
+<link rel="stylesheet" href="/static/css/common.css">
+<style>
+    /* fl_update 스타일 - bl_update와 일관성 맞춤 */
+    #fl_update_outer {
+        padding: 20px;
+        padding-bottom: 0;
+        overflow-y: auto;
+        background-color: #f8f9fa;
+        font-size: 12px;
+    }
+
+    #fl_update_outer .button-area {
+        text-align: right;
+        margin-bottom: 15px;
+        padding: 15px;
+        background-color: white;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    #fl_update_outer .button-area button {
+        margin-left: 5px;
+        padding: 6px 12px;
+        background: #fff;
+        color: #333;
+        border: 1px solid #ced4da;
+        font-size: 12px;
+        font-family: inherit;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.15s ease-in-out;
+    }
+
+    #fl_update_outer .button-area button:hover {
+        background-color: #e9ecef;
+        border-color: #adb5bd;
+    }
+
+    #fl_update_outer .button-area button.btn-primary {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+
+    #fl_update_outer .button-area button.btn-primary:hover {
+        background: #0056b3;
+        border-color: #004085;
+    }
+
+    #fl_update_outer .selection-area {
+        margin-bottom: 15px;
+    }
+
+    #fl_update_outer .selection-area .table {
+        margin-bottom: 0;
+        background-color: white;
+        border-collapse: collapse;
+        font-size: 12px;
+    }
+
+    #fl_update_outer .selection-area .table td {
+        padding: 8px;
+        border: 1px solid #dee2e6;
+        vertical-align: middle;
+    }
+
+    #fl_update_outer .selection-area .table-header {
+        background-color: #f8f9fa;
+        font-weight: bold;
+        text-align: center;
+        width: 10%;
+    }
+
+    #fl_update_outer .content-area {
+        background-color: white;
+        border-radius: 5px;
+        border: 1px solid #dee2e6;
+        min-height: 400px;
+        padding: 20px;
+    }
+
+    #fl_update_outer .form-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+        font-size: 12px;
+    }
+
+    #fl_update_outer .form-table td {
+        padding: 8px;
+        border: 1px solid #dee2e6;
+        vertical-align: middle;
+    }
+
+    #fl_update_outer .form-table .label {
+        background-color: #f8f9fa;
+        font-weight: bold;
+        text-align: center;
+        width: 15%;
+        min-width: 100px;
+    }
+
+    #fl_update_outer .form-table input,
+    #fl_update_outer .form-table select,
+    #fl_update_outer .form-table textarea {
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        padding: 4px 6px;
+        font-size: 12px;
+        width: 100%;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+
+    #fl_update_outer .form-table input:focus,
+    #fl_update_outer .form-table select:focus,
+    #fl_update_outer .form-table textarea:focus {
+        border-color: #007bff;
+        outline: 0;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    #fl_update_outer .form-table input[readonly] {
+        background-color: #e9ecef;
+        color: #6c757d;
+    }
+
+    #fl_update_outer .form-table .text-right {
+        text-align: right;
+    }
+
+    /* 면적 계산기 스타일 */
+    #fl_update_outer .area_calculator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    #fl_update_outer .area_calculator input {
+        width: 100px !important;
+        text-align: right;
+        padding-right: 8px;
+    }
+
+    #fl_update_outer .area_calculator span {
+        font-size: 12px;
+        color: #666;
+        white-space: nowrap;
+        font-weight: normal;
+    }
+
+    /* 입주사 현황 스타일 */
+    #fl_update_outer .tenant-status {
+        min-height: 80px;
+        max-height: 120px;
+        overflow-y: auto;
+        padding: 8px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        background-color: #f8f9fa;
+        font-size: 11px;
+        line-height: 1.4;
+        color: #495057;
+    }
+
+    /* 에러/성공 메시지 */
+    .error-message {
+        background-color: #f8d7da;
+        color: #721c24;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        border: 1px solid #f5c6cb;
+        font-size: 12px;
+        text-align: center;
+    }
+
+    .success-message {
+        background-color: #d4edda;
+        color: #155724;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        border: 1px solid #c3e6cb;
+        font-size: 12px;
+        text-align: center;
+    }
+
+    /* 로딩 스타일 */
+    .loading-message {
+        text-align: center;
+        padding: 50px;
+        color: #6c757d;
+        font-size: 14px;
+    }
+
+    .loading-message .spinner {
+        width: 30px;
+        height: 30px;
+        border: 3px solid #f3f3f3;
+        border-top: 3px solid #007bff;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    /* 반응형 */
+    @media (max-width: 768px) {
+        #fl_update_outer {
+            padding: 10px;
+        }
+        
+        #fl_update_outer .area_calculator {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 5px;
+        }
+        
+        #fl_update_outer .area_calculator input {
+            width: 100% !important;
+        }
+
+        #fl_update_outer .form-table .label {
+            width: 25%;
+        }
+    }
+</style>
+
+<div id="fl_update_outer">
+    <!-- 상단 버튼 영역 -->
+    <div class="button-area">
+        <button type="button" id="rightSaveBtn" class="btn-primary">저장</button>
+        <button type="button" id="rightListBtn">목록보기</button>
+    </div>
+
+    <!-- 사업장/건물/층 선택 영역 -->
+    <div class="selection-area">
+        <table class="table">
+            <tr>
+                <td class="table-header">사업장</td>
+                <td id="prop_info">로딩 중...</td>
+                <td class="table-header">건물</td>
+                <td id="bl_info">로딩 중...</td>
+                <td class="table-header">층</td>
+                <td id="fl_info">로딩 중...</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <div class="content-area" id="main_content_area">
+        <table class="form-table">
+            <tr>
+                <td class="label">층이름</td>
+                <td style="width: 35%;">
+                    <input type="text" id="fl_name" placeholder="층 이름을 입력하세요">
+                </td>
+                <td class="label">층면적</td>
+                <td style="width: 35%;">
+                    <div class="area_calculator">
+                        <input type="text" id="area_fl" placeholder="0" class="text-right">
+                        <span>㎡</span>
+                        <input type="text" id="area_pyeong" placeholder="0" class="text-right" readonly>
+                        <span>평</span>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">층코드</td>
+                <td>
+                    <input type="text" id="fl_code" readonly>
+                </td>
+                
+            </tr>
+            <tr>
+                <td class="label">입주사 현황</td>
+                <td colspan="3">
+                    <div class="tenant-status" id="tenant_status_text">
+                        입주사 정보를 불러오는 중...
+                    </div>
+                </td>
+            </tr>
+            
+        </table>
+
+        
+
+    <!-- 숨겨진 필드들 -->
+    <input type="hidden" id="prop_id">
+    <input type="hidden" id="bl_id">
+    <input type="hidden" id="fl_id">
+</div>
+
+<script>
+// 🛡️ 완전한 스코프 분리 - 변수 충돌 방지
+(function() {
+    'use strict';
+    
+    console.log('🏗️ fl_update.html 스크립트 시작!');
+    
+    // 네임스페이스 생성 - 중복 방지
+    if (typeof window.FlUpdateModule !== 'undefined') {
+        console.log('🏗️ 기존 FlUpdateModule 재초기화');
+        // 기존 모듈이 있어도 재설정 허용
+        if (window.FlUpdateModule.data) {
+            window.FlUpdateModule.data.isInitialized = false;
+            window.FlUpdateModule.data.currentFlData = null;
+        }
+    }
+    
+    // 모듈 생성
+    window.FlUpdateModule = {
+        // 데이터 저장소
+        data: {
+            isInitialized: false,
+            currentFlData: null,
+            isLoading: false,
+            propId: null,
+            blId: null,
+            flId: null
+        },
+        
+        // 🔧 안전한 DOM 접근 헬퍼
+        safeGetElement: function(id) {
+            try {
+                const element = document.getElementById(id);
+                if (!element) {
+                    console.warn('🏗️ DOM 요소를 찾을 수 없음:', id);
+                }
+                return element;
+            } catch (error) {
+                console.error('🏗️ DOM 접근 오류:', error);
+                return null;
+            }
+        },
+        
+        // 🔧 안전한 값 설정 헬퍼
+        safeSetValue: function(id, value) {
+            try {
+                const element = this.safeGetElement(id);
+                if (element) {
+                    element.value = value || '';
+                }
+            } catch (error) {
+                console.error('🏗️ 값 설정 오류:', error);
+            }
+        },
+        
+        // 🔧 안전한 값 가져오기 헬퍼
+        safeGetValue: function(id) {
+            try {
+                const element = this.safeGetElement(id);
+                return element ? element.value : '';
+            } catch (error) {
+                console.error('🏗️ 값 가져오기 오류:', error);
+                return '';
+            }
+        },
+        
+        // 🔧 안전한 텍스트 설정 헬퍼
+        safeSetText: function(id, text) {
+            try {
+                const element = this.safeGetElement(id);
+                if (element) {
+                    element.textContent = text || '';
+                }
+            } catch (error) {
+                console.error('🏗️ 텍스트 설정 오류:', error);
+            }
+        },
+        
+        // 초기화
+        init: function() {
+            try {
+                console.log('🏗️ 층정보 수정 페이지 초기화 시작');
+                
+                // 🔧 강제 재초기화 (탭 재진입 문제 해결)
+                this.data.isInitialized = false;
+                this.data.currentFlData = null;
+                this.data.isLoading = false;
+                
+                // 🔧 층 정보 다양한 경로에서 확인
+                const propId = this.getFloorInfo('prop_id');
+                const blId = this.getFloorInfo('bl_id');
+                const flId = this.getFloorInfo('fl_id');
+                
+                console.log('🏗️ 층 정보 수집 결과:', { propId, blId, flId });
+                
+                if (!propId || !blId || !flId) {
+                    console.warn('🏗️ 층 정보가 없습니다.');
+                    this.showError('층 정보가 선택되지 않았습니다.<br>층 목록에서 수정할 층을 선택해주세요.');
+                    return;
+                }
+                
+                // 데이터 저장
+                this.data.propId = propId;
+                this.data.blId = blId;
+                this.data.flId = flId;
+                
+                // 전역 변수 갱신
+                window.selected_fl_prop_id = propId;
+                window.selected_fl_bl_id = blId;
+                window.selected_fl_id = flId;
+                
+                this.data.isInitialized = true;
+                this.bindEvents();
+                this.loadFloorData();
+                
+            } catch (error) {
+                console.error('🏗️ 초기화 오류:', error);
+                this.showError('페이지 초기화 중 오류가 발생했습니다.');
+            }
+        },
+        
+        // 🔧 층 정보 다양한 경로에서 수집
+        getFloorInfo: function(type) {
+            try {
+                // 1. URL 파라미터에서 확인
+                const urlParams = new URLSearchParams(window.location.search);
+                const fromUrl = urlParams.get(type);
+                if (fromUrl) {
+                    console.log(`🏗️ ${type} - URL에서 발견:`, fromUrl);
+                    return fromUrl;
+                }
+                
+                // 2. 전역 변수에서 확인
+                const globalVar = window[`selected_fl_${type}`];
+                if (globalVar) {
+                    console.log(`🏗️ ${type} - 전역변수에서 발견:`, globalVar);
+                    return globalVar;
+                }
+                
+                // 3. 기존 저장된 데이터에서 확인
+                if (this.data[type]) {
+                    console.log(`🏗️ ${type} - 저장된 데이터에서 발견:`, this.data[type]);
+                    return this.data[type];
+                }
+                
+                // 4. 다른 전역 변수 패턴들 확인
+                const patterns = [
+                    `current_fl_${type}`,
+                    `fl_${type}`,
+                    `selected_${type}`,
+                    type
+                ];
+                
+                for (const pattern of patterns) {
+                    if (window[pattern]) {
+                        console.log(`🏗️ ${type} - ${pattern}에서 발견:`, window[pattern]);
+                        return window[pattern];
+                    }
+                }
+                
+                console.warn(`🏗️ ${type} - 찾을 수 없음`);
+                return null;
+                
+            } catch (error) {
+                console.error(`🏗️ ${type} 정보 수집 오류:`, error);
+                return null;
+            }
+        },
+        
+        // 이벤트 리스너 등록
+        bindEvents: function() {
+            try {
+                // 저장 버튼
+                const saveBtn = this.safeGetElement('rightSaveBtn');
+                if (saveBtn) {
+                    saveBtn.onclick = () => this.saveFloorData();
+                }
+                
+                // 목록보기 버튼
+                const listBtn = this.safeGetElement('rightListBtn');
+                if (listBtn) {
+                    listBtn.onclick = () => this.navigateToFlList();
+                }
+                
+                // 층면적 단위 변환 (㎡ -> 평)
+                const areaFlInput = this.safeGetElement('area_fl');
+                if (areaFlInput) {
+                    areaFlInput.oninput = () => {
+                        try {
+                            const areaM2 = parseFloat(areaFlInput.value) || 0;
+                            const areaPyeong = (areaM2 * 0.3025).toFixed(2);
+                            this.safeSetValue('area_pyeong', areaPyeong);
+                        } catch (error) {
+                            console.error('🏗️ 면적 변환 오류:', error);
+                        }
+                    };
+                }
+                
+                // 엔터키 저장
+                const inputs = document.querySelectorAll('#fl_update_outer input[type="text"]:not([readonly])');
+                inputs.forEach(input => {
+                    input.onkeypress = (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            this.saveFloorData();
+                        }
+                    };
+                });
+                
+                console.log('🏗️ 이벤트 리스너 등록 완료');
+            } catch (error) {
+                console.error('🏗️ 이벤트 바인딩 오류:', error);
+            }
+        },
+        
+        // 층 데이터 로드
+        loadFloorData: function() {
+            try {
+                if (this.data.isLoading) {
+                    console.log('🏗️ 이미 로딩 중입니다.');
+                    return;
+                }
+                
+                const propId = this.data.propId;
+                const blId = this.data.blId;
+                const flId = this.data.flId;
+                
+                if (!propId || !blId || !flId) {
+                    console.warn('🏗️ 층 정보가 없어서 로딩을 건너뜁니다.');
+                    this.showError('층 정보가 누락되었습니다.');
+                    return;
+                }
+                
+                this.data.isLoading = true;
+                this.showLoading();
+                
+                const requestData = {
+                    prop_id: propId,
+                    bl_id: blId,
+                    fl_id: flId
+                };
+                
+                console.log('🏗️ 층 데이터 요청:', requestData);
+                
+                fetch('/fm/fl_update/getInputTagData', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                })
+                .then(response => {
+                    console.log('🏗️ 층 데이터 응답 상태:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🏗️ 층 데이터 응답:', data);
+                    
+                    if (data && data.success && data.data) {
+                        this.data.currentFlData = data.data;
+                        this.renderFloorData(data.data);
+                        console.log('🏗️ 층 데이터 로드 완료');
+                    } else {
+                        this.showError(`층 정보를 불러올 수 없습니다.<br>${data.message || '알 수 없는 오류'}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('🏗️ 층 데이터 로드 오류:', error);
+                    this.showError(`층 정보를 불러오는 중 오류가 발생했습니다.<br>${error.message}`);
+                })
+                .finally(() => {
+                    this.data.isLoading = false;
+                });
+                
+            } catch (error) {
+                console.error('🏗️ 층 데이터 로드 전체 오류:', error);
+                this.data.isLoading = false;
+                this.showError('층 데이터 로드 중 오류가 발생했습니다.');
+            }
+        },
+        
+        // 층 데이터 렌더링
+        renderFloorData: function(data) {
+            try {
+                console.log('🏗️ 층 데이터 렌더링 시작');
+                
+                // 🔧 먼저 폼 영역을 복원
+                this.restoreFormArea();
+                
+                // 상단 선택 영역 정보 표시
+                const propDisplay = data.prop_name ? `${data.prop_name} (${data.prop_id})` : (data.prop_id || '');
+                this.safeSetText('prop_info', propDisplay);
+                
+                const blDisplay = data.bl_name ? `${data.bl_name} (${data.bl_id})` : (data.bl_id || '');
+                this.safeSetText('bl_info', blDisplay);
+                
+                const flDisplay = data.fl_name ? `${data.fl_name} (${data.fl_id})` : (data.fl_id || '');
+                this.safeSetText('fl_info', flDisplay);
+                
+                // 폼 필드 설정
+                this.safeSetValue('fl_code', data.fl_id || '');
+                this.safeSetValue('fl_name', data.fl_name || '');
+                
+                // 층면적 설정 (㎡ -> 평 변환)
+                const areaM2 = parseFloat(data.area_fl) || 0;
+                const areaPyeong = (areaM2 * 0.3025).toFixed(2);
+                
+                this.safeSetValue('area_fl', areaM2.toString());
+                this.safeSetValue('area_pyeong', areaPyeong);
+                
+                // 입주사 현황 설정
+                const tenantText = data.tenant_names || '입주사 정보가 없습니다.';
+                this.safeSetText('tenant_status_text', tenantText);
+                
+                
+                
+                // 숨겨진 필드들 설정
+                this.safeSetValue('prop_id', data.prop_id);
+                this.safeSetValue('bl_id', data.bl_id);
+                this.safeSetValue('fl_id', data.fl_id);
+                
+                console.log('🏗️ 층 데이터 렌더링 완료');
+                
+            } catch (error) {
+                console.error('🏗️ 층 데이터 렌더링 오류:', error);
+                this.showError('데이터 렌더링 중 오류가 발생했습니다.');
+            }
+        },
+        
+        // 🔧 폼 영역 복원
+        restoreFormArea: function() {
+            const contentArea = this.safeGetElement('main_content_area');
+            if (!contentArea) return;
+            
+            // 이미 폼이 있으면 그대로 유지
+            const existingForm = contentArea.querySelector('.form-table');
+            if (existingForm) {
+                console.log('🏗️ 기존 폼 영역 유지');
+                return;
+            }
+            
+            // 폼 영역 복원
+            contentArea.innerHTML = `
+                <table class="form-table">
+                    <tr>
+                        <td class="label">층이름</td>
+                        <td style="width: 35%;">
+                            <input type="text" id="fl_name" placeholder="층 이름을 입력하세요">
+                        </td>
+                        <td class="label">층면적</td>
+                        <td style="width: 35%;">
+                            <div class="area_calculator">
+                                <input type="text" id="area_fl" placeholder="0" class="text-right">
+                                <span>㎡</span>
+                                <input type="text" id="area_pyeong" placeholder="0" class="text-right" readonly>
+                                <span>평</span>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="label">층코드</td>
+                        <td>
+                            <input type="text" id="fl_code" readonly>
+                        </td>
+                        
+                    </tr>
+                    <tr>
+                        <td class="label">입주사 현황</td>
+                        <td colspan="3">
+                            <div class="tenant-status" id="tenant_status_text">
+                                입주사 정보를 불러오는 중...
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        
+                    </tr>
+                </table>
+
+                
+            `;
+            
+            // 이벤트 다시 바인딩
+            this.bindAreaCalculator();
+        },
+        
+        // 🔧 면적 계산기 이벤트 바인딩
+        bindAreaCalculator: function() {
+            const areaFlInput = this.safeGetElement('area_fl');
+            if (areaFlInput) {
+                areaFlInput.oninput = () => {
+                    try {
+                        const areaM2 = parseFloat(areaFlInput.value) || 0;
+                        const areaPyeong = (areaM2 * 0.3025).toFixed(2);
+                        this.safeSetValue('area_pyeong', areaPyeong);
+                    } catch (error) {
+                        console.error('🏗️ 면적 변환 오류:', error);
+                    }
+                };
+            }
+        },
+        
+        // 층 데이터 저장
+        saveFloorData: function() {
+            try {
+                if (this.data.isLoading) {
+                    console.log('🏗️ 저장 요청 중복 방지');
+                    return;
+                }
+                
+                const propId = this.data.propId;
+                const blId = this.data.blId;
+                const flId = this.data.flId;
+                
+                if (!propId || !blId || !flId) {
+                    alert('층 정보를 선택해주세요.');
+                    return;
+                }
+                
+                // 폼 데이터 수집
+                const formData = {
+                    prop_id: propId,
+                    bl_id: blId,
+                    fl_id: flId,
+                    fl_name: this.safeGetValue('fl_name'),
+                    area_fl: parseFloat(this.safeGetValue('area_fl')) || 0,
+                };
+                
+                console.log('🏗️ 저장할 데이터:', formData);
+                
+                // 저장 버튼 비활성화
+                const saveBtn = this.safeGetElement('rightSaveBtn');
+                const originalText = saveBtn ? saveBtn.textContent : '저장';
+                if (saveBtn) {
+                    saveBtn.textContent = '저장 중...';
+                    saveBtn.disabled = true;
+                }
+                
+                this.data.isLoading = true;
+                
+                fetch('/fm/fl_update/save_fl_data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🏗️ 저장 응답:', data);
+                    
+                    if (data.success) {
+                        // 필요한 경우 데이터 새로고침
+                        setTimeout(() => {
+                            this.loadFloorData();
+                        }, 1000);
+                    } else {
+                        alert('저장에 실패했습니다: ' + (data.message || '알 수 없는 오류'));
+                    }
+                })
+                .catch(error => {
+                    console.error('🏗️ 저장 오류:', error);
+                    alert('저장 중 오류가 발생했습니다: ' + error.message);
+                })
+                .finally(() => {
+                    // 저장 버튼 복원
+                    if (saveBtn) {
+                        saveBtn.textContent = originalText;
+                        saveBtn.disabled = false;
+                    }
+                    this.data.isLoading = false;
+                });
+                
+            } catch (error) {
+                console.error('🏗️ 저장 전체 오류:', error);
+                this.data.isLoading = false;
+            }
+        },
+        
+        // 층 목록으로 이동
+        navigateToFlList: function() {
+            try {
+                console.log('🏗️ 층 목록으로 이동');
+                
+                // 선택된 층 정보 초기화
+                window.selected_fl_prop_id = null;
+                window.selected_fl_bl_id = null;
+                window.selected_fl_id = null;
+                
+                // HiddenFrame 탭 시스템 사용
+                if (window.tabManager && typeof window.tabManager.addTab === 'function') {
+                    // 기존 fl_update 탭 제거
+                    const currentTabId = window.tabManager.activeTabId;
+                    if (currentTabId) {
+                        window.tabManager.removeTab(currentTabId);
+                    }
+                    
+                    // fl_list 탭 추가
+                    setTimeout(() => {
+                        window.tabManager.addTab('/fm/fl_list.html', '층정보');
+                        if (window.showStatus) {
+                            window.showStatus('층정보 목록을 열었습니다.');
+                        }
+                    }, 100);
+                    
+                } else if (typeof window.loadContent === 'function') {
+                    // Fallback: 기존 방식
+                    window.loadContent('/fm/fl_list.html', '층정보');
+                    
+                } else {
+                    console.error('🏗️ 탭 생성 함수를 찾을 수 없습니다.');
+                }
+            } catch (error) {
+                console.error('🏗️ 목록 이동 오류:', error);
+            }
+        },
+        
+        showLoading: function() {
+            const contentArea = this.safeGetElement('main_content_area');
+            if (contentArea) {
+                contentArea.innerHTML = `
+                    <div class="loading-message">
+                        <div class="spinner"></div>
+                        <p>층 정보를 불러오는 중...</p>
+                    </div>
+                `;
+            }
+        },
+        
+        showError: function(message) {
+            console.error('🏗️ 오류:', message);
+            
+            const contentArea = this.safeGetElement('main_content_area');
+            if (contentArea) {
+                contentArea.innerHTML = `
+                    <div class="error-message">
+                        <h3 style="margin: 0 0 10px 0;">오류 발생</h3>
+                        <p style="margin: 0 0 15px 0;">${message}</p>
+                        <button type="button" onclick="FlUpdateModule.navigateToFlList()" 
+                                style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            층 목록으로 돌아가기
+                        </button>
+                    </div>
+                `;
+            }
+        },
+        
+        showSuccess: function(message) {
+            console.log('🏗️ 성공:', message);
+            
+            // 기존 성공 메시지 제거
+            const existingSuccess = document.querySelector('#fl_update_outer .success-message');
+            if (existingSuccess) {
+                existingSuccess.remove();
+            }
+            
+            // 새 성공 메시지 추가
+            const buttonArea = document.querySelector('#fl_update_outer .button-area');
+            if (buttonArea) {
+                const successDiv = document.createElement('div');
+                successDiv.className = 'success-message';
+                successDiv.textContent = message;
+                
+                buttonArea.parentNode.insertBefore(successDiv, buttonArea.nextSibling);
+                
+                // 3초 후 자동 제거
+                setTimeout(() => {
+                    successDiv.remove();
+                }, 3000);
+            }
+            
+            if (window.showStatus) {
+                window.showStatus(message);
+            }
+        }
+    };
+    
+    // 전역 초기화 함수 등록
+    window.initializeFlUpdate = function() {
+        window.FlUpdateModule.init();
+    };
+    
+    // 자동 초기화 (즉시 실행)
+    setTimeout(() => {
+        console.log('🏗️ FlUpdate 자동 초기화 시작');
+        window.FlUpdateModule.init();
+    }, 500);
+    
+    console.log('🏗️ FlUpdateModule 로드 완료');
+    
+})(); // 즉시 실행 함수 끝
+</script>

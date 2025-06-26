@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>도면정보 등록</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <style>
+        /* dms_insert 스타일 - JSP 원본 기반 */
+        #dms_insert_outer {
+            padding: 20px;
+            padding-bottom: 0;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            font-size: 12px;
+        }
+
+        #dms_insert_outer .top-buttons {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+
+        #dms_insert_outer .top-buttons button {
+            height: 32px;
+            padding: 0 16px;
+            background: #fff;
+            color: #333;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+        }
+
+        #dms_insert_outer .top-buttons button:hover {
+            background-color: #e9ecef;
+            border-color: #adb5bd;
+        }
+
+        #dms_insert_outer .top-buttons button.btn-primary {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        #dms_insert_outer .top-buttons button.btn-primary:hover {
+            background: #0056b3;
+            border-color: #004085;
+        }
+
+        #dms_insert_outer .info-area {
+            background-color: white;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        #dms_insert_outer .info-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #dms_insert_outer .info-table td {
+            padding: 12px;
+            border: 1px solid #dee2e6;
+            font-size: 12px;
+            vertical-align: middle;
+        }
+
+        #dms_insert_outer .info-table .label-cell {
+            background-color: #f7f7f7;
+            text-align: center;
+            font-weight: bold;
+            width: 15%;
+            position: relative;
+        }
+
+        #dms_insert_outer .info-table .value-cell {
+            background-color: white;
+            text-align: left;
+            width: 35%;
+            padding-left: 15px;
+        }
+
+        #dms_insert_outer .info-table input[type="text"] {
+            width: 400px;
+            height: 32px;
+            padding: 0 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        #dms_insert_outer .info-table input.readonly {
+            background-color: #f8f9fa;
+            color: #6c757d;
+        }
+
+        #dms_insert_outer .info-table select {
+            width: 220px;
+            height: 32px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+
+        #dms_insert_outer .info-table input[type="file"] {
+            width: 200px;
+            font-size: 12px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 4px;
+        }
+
+        .required::after {
+            content: "*";
+            color: red;
+            margin-left: 2px;
+        }
+
+        #dms_insert_outer .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        #dms_insert_outer .loading .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 에러 메시지 스타일 */
+        .error-message {
+            color: #dc3545;
+            font-size: 11px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .form-group {
+            position: relative;
+        }
+
+        .form-group.error input,
+        .form-group.error select {
+            border-color: #dc3545;
+        }
+
+        .form-group.error .error-message {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div id="dms_insert_outer">
+        <!-- 상단 버튼 영역 -->
+        <div class="top-buttons">
+            <button type="button" id="btn_save" class="btn-primary">저장</button>
+            <button type="button" id="btn_list">목록보기</button>
+        </div>
+
+        <!-- 도면 정보 등록 영역 - JSP와 완전히 동일한 구조 -->
+        <div class="info-area">
+            <table class="info-table">
+                <!-- 첫 번째 행: 도면명, 작성자 -->
+                <tr>
+                    <td class="label-cell required">도면명</td>
+                    <td class="value-cell">
+                        <div class="form-group">
+                            <input type="text" id="contents" name="contents" placeholder="도면명을 입력해주세요">
+                            <div class="error-message">도면명을 입력해주세요</div>
+                        </div>
+                    </td>
+                    <td class="label-cell required">작성자</td>
+                    <td class="value-cell">
+                        <div class="form-group">
+                            <input type="text" id="em_name" name="em_name" class="readonly" readonly>
+                            <div class="error-message">작성자 정보를 불러올 수 없습니다</div>
+                        </div>
+                    </td>
+                </tr>
+                <!-- 두 번째 행: 빈 셀, 건물코드 -->
+                <tr>
+                    <td class="label-cell">&nbsp;</td>
+                    <td class="value-cell">&nbsp;</td>
+                    <td class="label-cell">건물코드</td>
+                    <td class="value-cell">
+                        <select id="bl_id" name="bl_id">
+                            <option value="">건물코드를 선택하세요</option>
+                        </select>
+                    </td>
+                </tr>
+                <!-- 세 번째 행: 파트코드, 층코드 -->
+                <tr>
+                    <td class="label-cell">파트코드</td>
+                    <td class="value-cell">
+                        <select id="emclass_id" name="emclass_id">
+                            <option value="">파트코드를 선택하세요</option>
+                        </select>
+                    </td>
+                    <td class="label-cell">층코드</td>
+                    <td class="value-cell">
+                        <select id="fl_id" name="fl_id">
+                            <option value="">층코드를 선택하세요</option>
+                        </select>
+                    </td>
+                </tr>
+                <!-- 첫 번째 첨부파일 행: 첨부파일1, 첨부파일2 -->
+                <tr>
+                    <td class="label-cell">첨부파일1</td>
+                    <td class="value-cell">
+                        <input type="file" id="filename1" name="filename1">
+                    </td>
+                    <td class="label-cell">첨부파일2</td>
+                    <td class="value-cell">
+                        <input type="file" id="filename2" name="filename2">
+                    </td>
+                </tr>
+                <!-- 두 번째 첨부파일 행: 첨부파일3, 첨부파일4 -->
+                <tr>
+                    <td class="label-cell">첨부파일3</td>
+                    <td class="value-cell">
+                        <input type="file" id="filename3" name="filename3">
+                    </td>
+                    <td class="label-cell">첨부파일4</td>
+                    <td class="value-cell">
+                        <input type="file" id="filename4" name="filename4">
+                    </td>
+                </tr>
+                <!-- 세 번째 첨부파일 행: 첨부파일5, 첨부파일6 -->
+                <tr>
+                    <td class="label-cell">첨부파일5</td>
+                    <td class="value-cell">
+                        <input type="file" id="filename5" name="filename5">
+                    </td>
+                    <td class="label-cell">첨부파일6</td>
+                    <td class="value-cell">
+                        <input type="file" id="filename6" name="filename6">
+                    </td>
+                </tr>
+            </table>
+            
+            <!-- 숨겨진 필드들 -->
+            <input type="hidden" id="em_id" name="em_id">
+            <input type="hidden" id="prop_id" name="prop_id">
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+        
+        console.log('📝 dms_insert.html 스크립트 시작!');
+        
+        if (typeof window.DmsInsertModule !== 'undefined') {
+            if (window.DmsInsertModule.cleanup && typeof window.DmsInsertModule.cleanup === 'function') {
+                window.DmsInsertModule.cleanup();
+            }
+            delete window.DmsInsertModule;
+        }
+        
+        window.DmsInsertModule = {
+            data: {
+                blList: [],
+                flList: [],
+                partList: [],
+                isInitialized: false,
+                isSubmitting: false,
+                moduleId: 'dms_insert_' + Date.now()
+            },
+            
+            safeGetElement: function(id) {
+                try {
+                    const element = document.getElementById(id);
+                    if (!element) {
+                        console.warn('📝 [DMS Insert] DOM 요소를 찾을 수 없음:', id);
+                    }
+                    return element;
+                } catch (error) {
+                    console.error('📝 [DMS Insert] DOM 접근 오류:', error);
+                    return null;
+                }
+            },
+
+            init: function() {
+                console.log('📝 [DMS Insert] 도면 등록 페이지 초기화 시작');
+                
+                const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                const prop_id = window.currentPropId;
+                const user_name = window.userInfo && window.userInfo.name;
+                
+                if (!em_id) {
+                    console.error('📝 [DMS Insert] em_id가 없습니다.');
+                    this.showError('사용자 정보를 불러올 수 없습니다.');
+                    return;
+                }
+                
+                if (!prop_id) {
+                    console.error('📝 [DMS Insert] prop_id가 없습니다.');
+                    this.showError('사업장을 선택해주세요.');
+                    return;
+                }
+                
+                // 초기 데이터 설정
+                this.safeSetValue('em_id', em_id);
+                this.safeSetValue('prop_id', prop_id);
+                this.safeSetValue('em_name', user_name || '');
+                
+                this.data.isInitialized = true;
+                this.bindEvents();
+                
+                // 🔥 즉시 기본값 렌더링 (사용자가 빈 화면을 보지 않도록)
+                this.renderPartSelectDefault();
+                
+                // 데이터 로드
+                this.loadData();
+            },
+            
+            bindEvents: function() {
+                const btnSave = this.safeGetElement('btn_save');
+                if (btnSave) {
+                    btnSave.onclick = () => { this.validateAndSave(); };
+                }
+                
+                const btnList = this.safeGetElement('btn_list');
+                if (btnList) {
+                    btnList.onclick = () => { this.goToList(); };
+                }
+
+                // 건물 선택 변경 이벤트
+                const blSelect = this.safeGetElement('bl_id');
+                if (blSelect) {
+                    blSelect.onchange = () => {
+                        this.loadFloorList(blSelect.value);
+                    };
+                }
+
+                // Enter 키 처리 (저장)
+                const contentsInput = this.safeGetElement('contents');
+                if (contentsInput) {
+                    contentsInput.onkeypress = (e) => {
+                        if (e.key === 'Enter') {
+                            this.validateAndSave();
+                        }
+                    };
+                }
+                
+                console.log('📝 [DMS Insert] 이벤트 리스너 등록 완료');
+            },
+
+            loadData: function() {
+                console.log('📝 [DMS Insert] 기초 데이터 로드 시작');
+                
+                // 병렬로 데이터 로드
+                Promise.allSettled([
+                    this.loadBuildingList(),
+                    this.loadPartList()
+                ]).then(results => {
+                    console.log('📝 [DMS Insert] 모든 기초 데이터 로드 완료');
+                    
+                    // 로드 결과 확인
+                    results.forEach((result, index) => {
+                        const names = ['건물 목록', '파트코드 목록'];
+                        if (result.status === 'rejected') {
+                            console.warn(`📝 [DMS Insert] ${names[index]} 로드 실패:`, result.reason);
+                        }
+                    });
+                });
+            },
+
+            renderPartSelectDefault: function() {
+                console.log('🔥 [DMS Insert] 파트코드 기본값 렌더링 시작');
+                
+                const attemptRender = (attempt = 1) => {
+                    const select = document.getElementById('emclass_id');
+                    
+                    if (!select) {
+                        console.warn(`🟡 [DMS Insert] emclass_id 요소 없음 (시도 ${attempt}/5)`);
+                        if (attempt < 5) {
+                            setTimeout(() => attemptRender(attempt + 1), 200);
+                        }
+                        return;
+                    }
+                    
+                    const defaultParts = [
+                        '건축', '관제', '기계', '기타', '미화', '방재', '전기', '주차', '행정'
+                    ];
+                    
+                    select.innerHTML = '<option value="">파트코드를 선택하세요</option>';
+                    
+                    defaultParts.forEach(part => {
+                        const option = document.createElement('option');
+                        option.value = part;
+                        option.textContent = part;
+                        select.appendChild(option);
+                    });
+                    
+                    console.log('🟢 [DMS Insert] 파트코드 기본값 렌더링 완료:', defaultParts.length, '개');
+                };
+                
+                attemptRender();
+            },
+
+            loadPartList: function() {
+                return new Promise((resolve, reject) => {
+                    const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                    const prop_id = window.currentPropId;
+                    
+                    if (!em_id) {
+                        console.warn('🟡 [DMS Insert] em_id 누락, 기본값만 사용');
+                        resolve();
+                        return;
+                    }
+                    
+                    fetch('fm/dms_insert/get_part_list', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            em_id: em_id, 
+                            prop_id: prop_id || ''
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.success && data.data && data.data.length > 0) {
+                            console.log('🟢 [DMS Insert] API에서 파트코드 데이터 수신, 재렌더링');
+                            this.renderPartSelect(data.data);
+                            this.data.partList = data.data;
+                        } else {
+                            console.log('🟡 [DMS Insert] API 응답 무효, 기본값 유지');
+                        }
+                        resolve();
+                    })
+                    .catch(error => {
+                        console.error('🔴 [DMS Insert] 파트 목록 로드 오류:', error);
+                        reject(error);
+                    });
+                });
+            },
+
+            renderPartSelect: function(parts) {
+                const select = this.safeGetElement('emclass_id');
+                if (!select) return;
+                
+                console.log('🔍 [DMS Insert] 파트코드 옵션 렌더링 (API 데이터):', parts);
+                
+                select.innerHTML = '<option value="">파트코드를 선택하세요</option>';
+                parts.forEach(part => {
+                    const option = document.createElement('option');
+                    option.value = part.emclass_id;
+                    option.textContent = part.emclass_id;
+                    select.appendChild(option);
+                });
+                
+                console.log('🟢 [DMS Insert] 파트코드 옵션 렌더링 완료 (API):', parts.length, '개');
+            },
+
+            loadBuildingList: function() {
+                return new Promise((resolve, reject) => {
+                    const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                    const prop_id = window.currentPropId;
+                    
+                    if (!em_id || !prop_id) {
+                        resolve();
+                        return;
+                    }
+                    
+                    fetch('fm/dms_insert/get_bl_list', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ em_id: em_id, prop_id: prop_id })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.success) {
+                            this.data.blList = data.data || [];
+                            this.renderBuildingSelect(data.data || []);
+                        }
+                        resolve();
+                    })
+                    .catch(error => {
+                        console.error('📝 [DMS Insert] 건물 목록 로드 오류:', error);
+                        reject(error);
+                    });
+                });
+            },
+
+            renderBuildingSelect: function(buildings) {
+                const select = this.safeGetElement('bl_id');
+                if (!select) return;
+                
+                select.innerHTML = '<option value="">건물코드를 선택하세요</option>';
+                buildings.forEach(building => {
+                    const option = document.createElement('option');
+                    option.value = building.bl_id;
+                    option.textContent = `${building.bl_name}(${building.bl_id})`;
+                    select.appendChild(option);
+                });
+            },
+
+            loadFloorList: function(blId) {
+                const prop_id = window.currentPropId;
+                const flSelect = this.safeGetElement('fl_id');
+                if (!flSelect) return;
+                
+                flSelect.innerHTML = '<option value="">층코드를 선택하세요</option>';
+                this.data.flList = [];
+
+                if (!prop_id || !blId) return;
+
+                fetch('fm/dms_insert/get_fl_list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prop_id: prop_id, bl_id: blId })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.success) {
+                        this.data.flList = data.data || [];
+                        this.renderFloorSelect(data.data || []);
+                    }
+                })
+                .catch(error => {
+                    console.error('📝 [DMS Insert] 층 목록 로드 오류:', error);
+                });
+            },
+
+            renderFloorSelect: function(floors) {
+                const select = this.safeGetElement('fl_id');
+                if (!select) return;
+                
+                select.innerHTML = '<option value="">층코드를 선택하세요</option>';
+                floors.forEach(floor => {
+                    const option = document.createElement('option');
+                    option.value = floor.fl_id;
+                    option.textContent = floor.fl_name;
+                    select.appendChild(option);
+                });
+            },
+            
+            validateAndSave: function() {
+                if (this.data.isSubmitting) {
+                    console.log('🟡 [DMS Insert] 이미 저장 중입니다.');
+                    return;
+                }
+
+                console.log('📝 [DMS Insert] 저장 유효성 검사 시작');
+                
+                // 기존 에러 표시 제거
+                this.clearErrors();
+                
+                let hasError = false;
+                
+                // 필수 필드 검증 (JSP 원본 로직과 동일)
+                const contentsElement = this.safeGetElement('contents');
+                if (!contentsElement || !contentsElement.value.trim()) {
+                    this.showFieldError('contents', '도면명을 입력해주세요');
+                    hasError = true;
+                }
+
+                const emIdElement = this.safeGetElement('em_id');
+                if (!emIdElement || !emIdElement.value.trim()) {
+                    this.showFieldError('em_name', '작성자를 선택해주세요');
+                    hasError = true;
+                }
+
+                if (hasError) {
+                    // 첫 번째 에러 필드에 포커스
+                    if (contentsElement && !contentsElement.value.trim()) {
+                        contentsElement.focus();
+                    }
+                    return;
+                }
+
+                if (confirm('저장하시겠습니까?')) {
+                    this.saveData();
+                }
+            },
+
+            clearErrors: function() {
+                const errorGroups = document.querySelectorAll('#dms_insert_outer .form-group.error');
+                errorGroups.forEach(group => {
+                    group.classList.remove('error');
+                });
+            },
+
+            showFieldError: function(fieldId, message) {
+                const field = this.safeGetElement(fieldId);
+                if (!field) return;
+                
+                const formGroup = field.closest('.form-group');
+                if (formGroup) {
+                    formGroup.classList.add('error');
+                    const errorMsg = formGroup.querySelector('.error-message');
+                    if (errorMsg) {
+                        errorMsg.textContent = message;
+                    }
+                }
+            },
+            
+            saveData: function() {
+                this.data.isSubmitting = true;
+                
+                // 저장 버튼 비활성화
+                const btnSave = this.safeGetElement('btn_save');
+                if (btnSave) {
+                    btnSave.disabled = true;
+                    btnSave.textContent = '저장 중...';
+                }
+                
+                console.log('📝 [DMS Insert] 데이터 저장 시작');
+                
+                // FormData 생성 (파일 업로드 포함)
+                const formData = new FormData();
+                
+                // 텍스트 데이터 추가
+                formData.append('em_id', this.safeGetElement('em_id').value || '');
+                formData.append('prop_id', this.safeGetElement('prop_id').value || '');
+                formData.append('contents', this.safeGetElement('contents').value.trim());
+                formData.append('bl_id', this.safeGetElement('bl_id').value || '');
+                formData.append('fl_id', this.safeGetElement('fl_id').value || '');
+                formData.append('emclass_id', this.safeGetElement('emclass_id').value || '');
+                
+                // 파일 데이터 추가 (6개 슬롯)
+                for (let i = 1; i <= 6; i++) {
+                    const fileInput = this.safeGetElement(`filename${i}`);
+                    if (fileInput && fileInput.files && fileInput.files[0]) {
+                        formData.append(`filename${i}`, fileInput.files[0]);
+                        console.log(`📎 [DMS Insert] 파일 ${i} 추가됨:`, fileInput.files[0].name);
+                    }
+                }
+                
+                console.log('📝 [DMS Insert] FormData 준비 완료');
+                
+                fetch('fm/dms_insert/save_data', {
+                    method: 'POST',
+                    body: formData  // Content-Type은 자동 설정됨
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('📝 [DMS Insert] 저장 응답:', data);
+                    
+                    this.data.isSubmitting = false;
+                    
+                    // 저장 버튼 복원
+                    if (btnSave) {
+                        btnSave.disabled = false;
+                        btnSave.textContent = '저장';
+                    }
+                    
+                    if (data && data.success) {
+                        if (confirm(data.message || '작성되었습니다.\n도면등록현황으로 이동합니다.')) {
+
+                            const myTabId = window.tabManager.activeTabId || null; // 현재 탭 ID 기억
+
+                            // 도면현황탭 찾기
+                            if (window.tabManager && window.tabManager.tabs) {
+                                let listTabId = null;
+
+                                if (window.tabManager.tabs instanceof Map) {
+                                    for (const [tabId, tab] of window.tabManager.tabs.entries()) {
+                                        if (tabId.includes('dms_list') || (tab.url && tab.url.includes('dms_list.html'))) {
+                                            listTabId = tabId;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                if (listTabId && typeof window.tabManager.switchToTab === 'function') {
+                                    window.tabManager.switchToTab(listTabId);
+
+                                    setTimeout(() => {
+                                        if (window.DmsListModule && typeof window.DmsListModule.loadData === 'function') {
+                                            window.DmsListModule.loadData('read');
+                                        }
+                                    }, 200);
+
+                                } else if (typeof window.tabManager.addTab === 'function') {
+                                    window.tabManager.addTab('/dms/dms_list.html', '도면정보관리');
+                                }
+
+                                // 현재 '등록' 탭 정확히 닫기
+                                setTimeout(() => {
+                                    if (typeof window.tabManager.removeTab === 'function' && myTabId) {
+                                        window.tabManager.removeTab(myTabId);
+                                    }
+                                }, 300);
+
+                            } else {
+                                window.location.href = '/dms/dms_list.html';
+                            }
+                        }
+                    }
+                    else {
+                        alert(`저장 실패: ${data ? data.message : 'Unknown error'}`);
+                    }
+                })
+
+                .catch(error => {
+                    console.error('📝 [DMS Insert] 저장 오류:', error);
+                    
+                    this.data.isSubmitting = false;
+                    
+                    // 저장 버튼 복원
+                    if (btnSave) {
+                        btnSave.disabled = false;
+                        btnSave.textContent = '저장';
+                    }
+                    
+                    alert(`저장 중 오류가 발생했습니다: ${error.message}`);
+                });
+            },
+            
+            goToList: function() {
+                try {
+                    if (window.tabManager && window.tabManager.tabs) {
+                        let listTabId = null;
+                        
+                        // 기존 목록 탭 찾기
+                        if (window.tabManager.tabs instanceof Map) {
+                            for (const [tabId, tab] of window.tabManager.tabs.entries()) {
+                                if (tabId.includes('dms_list') || 
+                                    (tab.url && tab.url.includes('dms_list.html'))) {
+                                    listTabId = tabId;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if (listTabId && typeof window.tabManager.switchToTab === 'function') {
+                            // 기존 목록 탭으로 이동
+                            window.tabManager.switchToTab(listTabId);
+                            
+                            // 현재 탭 제거
+                            setTimeout(() => {
+                                if (typeof window.tabManager.removeCurrentTab === 'function') {
+                                    window.tabManager.removeCurrentTab();
+                                }
+                            }, 100);
+                            
+                            // 목록 새로고침
+                            setTimeout(() => {
+                                if (window.DmsListModule && typeof window.DmsListModule.loadData === 'function') {
+                                    window.DmsListModule.loadData('read');
+                                }
+                            }, 300);
+                            
+                            return;
+                        }
+                        
+                        // 목록 탭이 없으면 새로 생성
+                        if (typeof window.tabManager.addTab === 'function') {
+                            window.tabManager.addTab('fm/dms_list.html', '도면정보관리');
+                            
+                            // 현재 탭 제거
+                            setTimeout(() => {
+                                if (typeof window.tabManager.removeCurrentTab === 'function') {
+                                    window.tabManager.removeCurrentTab();
+                                }
+                            }, 200);
+                            
+                            return;
+                        }
+                    }
+                    
+                    // 탭 매니저가 없으면 직접 이동
+                    window.location.href = 'fm/dms_list.html';
+                    
+                } catch (error) {
+                    console.error('🔴 [DMS Insert] 목록 이동 중 오류:', error);
+                    window.location.href = 'fm/dms_list.html';
+                }
+            },
+            
+            safeSetValue: function(id, value) {
+                const element = this.safeGetElement(id);
+                if (element && value != null) {
+                    element.value = value;
+                }
+            },
+            
+            showError: function(message) {
+                console.error('🔴 [DMS Insert] 오류:', message);
+                
+                const infoArea = document.querySelector('#dms_insert_outer .info-area');
+                if (infoArea) {
+                    infoArea.innerHTML = `
+                        <div style="text-align: center; padding: 50px; color: #dc3545; background-color: #f8d7da; border: 1px solid #f5c6cb; border-radius: 5px;">
+                            <h4 style="margin-bottom: 20px;">⚠️ 오류 발생</h4>
+                            <p style="margin-bottom: 30px; font-size: 14px;">${message}</p>
+                            <div style="display: flex; gap: 10px; justify-content: center;">
+                                <button onclick="location.reload()" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                    다시 시도
+                                </button>
+                                <button onclick="DmsInsertModule.goToList()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                    목록으로 돌아가기
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            },
+            
+            cleanup: function() {
+                console.log('📝 [DMS Insert] DmsInsertModule 정리 중...');
+                this.data.isInitialized = false;
+                this.data.isSubmitting = false;
+                this.data.blList = [];
+                this.data.flList = [];
+                this.data.partList = [];
+            }
+        };
+        
+        setTimeout(() => {
+            if (!window.DmsInsertModule.data.isInitialized) {
+                console.log('📝 [DMS Insert] 자동 초기화 시작');
+                window.DmsInsertModule.init();
+            }
+        }, 100);
+        
+        console.log('📝 [DMS Insert] DmsInsertModule 로드 완료');
+        
+    })();
+    </script>
+</body>
+</html>

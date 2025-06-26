@@ -234,86 +234,134 @@
     
     console.log('🏢 blpds_update.html 스크립트 시작!');
     
-    // 네임스페이스 생성 - 중복 방지
     if (typeof window.BlpdsUpdateModule !== 'undefined') {
-        console.log('🏢 기존 모듈 재사용');
-        return; // 이미 로드됨
+    console.log('🏢 기존 모듈 존재, 무조건 재초기화 시도');
+    
+    // URL 파라미터 확인 (여러 방법으로 시도)
+    const currentUrl = window.location.href;
+    const urlParams = new URLSearchParams(window.location.search);
+    const auto_number_from_url = urlParams.get('auto_number');
+    
+    console.log('🏢 현재 URL:', currentUrl);
+    console.log('🏢 URL search:', window.location.search);
+    console.log('🏢 추출된 auto_number:', auto_number_from_url);
+    
+    // URL 파라미터 또는 전역 변수에서 auto_number 확인
+    if ((auto_number_from_url && auto_number_from_url !== 'null' && auto_number_from_url !== 'undefined') || 
+        window.selected_auto_number) {
+        
+        const autoNumber = auto_number_from_url || window.selected_auto_number;
+        console.log('🏢 auto_number 발견:', autoNumber, '- 재초기화 실행');
+        
+        // 재초기화를 위해 플래그 리셋
+        window.BlpdsUpdateModule.data.isInitialized = false;
+        
+        // 새 파라미터로 즉시 초기화
+        window.BlpdsUpdateModule.init();
+    } else {
+        console.log('🏢 auto_number 없음, 재초기화 건너뜀');
     }
+    return; // 기존 모듈 사용
+}
     
     // 모듈 생성
     window.BlpdsUpdateModule = {
-        // 데이터 저장소
         data: {
             autoNumber: null,
             blId: null,
-            typeChk: null,
+            typeChk: null, // 1:일반파일, 2:텍스트, 3:이미지
             propSearch: null,
             hasPermission: false,
-            isInitialized: false
+            isInitialized: false,
+            currentFile: null // 현재 선택된 파일 객체 (업로드용)
         },
-        
-        // 초기화
-        init: function(params) {
-            console.log('🏢 건물이력 상세편집 페이지 초기화 시작');
-            console.log('🏢 받은 파라미터:', params);
-            
-            if (this.data.isInitialized) {
-                console.log('🏢 이미 초기화됨, 데이터만 다시 로드');
-                // 새로운 파라미터로 다시 로드
-                if (params) {
-                    this.data.autoNumber = params.auto_number;
-                    this.data.blId = params.bl_id;
-                    this.data.typeChk = params.type || '2';
-                    this.data.propSearch = params.prop_search;
-                }
-                this.loadData();
-                return;
+
+        init: function(paramsFromCall) {
+            console.log('🏢 [blpds_update] 건물이력 상세편집 페이지 초기화 시작');
+            console.log('🏢 [blpds_update] 받은 초기화 호출 파라미터 (paramsFromCall):', paramsFromCall);
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const auto_number_from_url = urlParams.get('auto_number');
+            const bl_id_from_url = urlParams.get('bl_id');
+            const type_from_url = urlParams.get('type');
+            const prop_search_from_url = urlParams.get('prop_search');
+
+            console.log('🏢 [blpds_update] URL 파라미터 직접 확인 - auto_number:', auto_number_from_url, 'type:', type_from_url);
+
+            let finalAutoNumber = null;
+            let finalBlId = null;
+            let finalType = '2'; // 기본값은 텍스트 이력
+            let finalPropSearch = null;
+
+            // URL 쿼리 파라미터가 최우선
+            if (auto_number_from_url && auto_number_from_url !== 'null' && auto_number_from_url !== 'undefined') {
+                finalAutoNumber = parseInt(parseFloat(auto_number_from_url), 10); // float을 먼저 parse한 후 int로 변환
+                finalBlId = bl_id_from_url;
+                finalType = type_from_url || '2';
+                finalPropSearch = prop_search_from_url;
             }
-            
-            // 파라미터가 없으면 전역 변수에서 가져오기
-            if (!params) {
-                params = {
-                    auto_number: window.selected_auto_number,
-                    bl_id: window.selected_bl_id,
-                    type: window.selected_file_type || '2',
-                    prop_search: window.currentPropId
-                };
-                console.log('🏢 전역 변수에서 파라미터 수집:', params);
+            // paramsFromCall에서 가져오기 (정수 변환)
+            else if (paramsFromCall && (paramsFromCall.auto_number || paramsFromCall.auto_number === 0)) {
+                finalAutoNumber = parseInt(parseFloat(paramsFromCall.auto_number), 10);
+                finalBlId = paramsFromCall.bl_id;
+                finalType = paramsFromCall.type || '2';
+                finalPropSearch = paramsFromCall.prop_search;
             }
-            
-            // 파라미터 유효성 검사
-            if (!params.auto_number) {
-                console.error('🏢 auto_number가 없습니다:', params);
+            // 전역 변수에서 가져오기 (정수 변환)
+            else if (window.selected_auto_number || window.selected_auto_number === 0) {
+                finalAutoNumber = parseInt(parseFloat(window.selected_auto_number), 10);
+                finalBlId = window.selected_bl_id;
+                finalType = window.selected_file_type || '2';
+                finalPropSearch = window.currentPropId;
+            }
+            const finalParams = {
+                auto_number: finalAutoNumber,
+                bl_id: finalBlId,
+                type: finalType,
+                prop_search: finalPropSearch
+            };
+            console.log('🏢 [blpds_update] 최종 결정된 초기화 파라미터:', finalParams);
+
+            // 이미 초기화되었더라도, auto_number 또는 type이 변경되었다면 다시 로드
+            if (this.data.isInitialized &&
+                (this.data.autoNumber === finalAutoNumber && this.data.typeChk === finalType)) {
+                console.log('🏢 [blpds_update] 동일한 파라미터로 이미 초기화됨, 추가 로드 불필요.');
+                return; // 변경된 파라미터가 없으면 초기화 로직을 건너뜁니다.
+            }
+            // --- 핵심 수정 부분 끝 ---
+
+            if (isNaN(finalAutoNumber) || finalAutoNumber === null || typeof finalAutoNumber === 'undefined') {
+                console.error('🏢 [blpds_update] auto_number가 유효하지 않습니다. 페이지 로드 중단.');
                 alert('이력 정보가 없습니다. 다시 시도해주세요.');
+                const contentArea = document.getElementById('blpds_update_outer');
+                if (contentArea) {
+                    contentArea.innerHTML = '<div style="text-align: center; padding: 50px; color: #dc3545;">🚨 이력 정보를 불러올 수 없습니다.</div>';
+                }
+                this.data.isInitialized = false;
                 return;
             }
-            
-            // 파라미터 설정
-            this.data.autoNumber = params.auto_number;
-            this.data.blId = params.bl_id;
-            this.data.typeChk = params.type || '2';
-            this.data.propSearch = params.prop_search;
-            
-            // 히든 필드 설정
+
+            this.data.autoNumber = finalAutoNumber;
+            this.data.blId = finalBlId;
+            this.data.typeChk = finalType; // 1:일반파일, 2:텍스트, 3:이미지
+            this.data.propSearch = finalPropSearch;
+
             document.getElementById('auto_number').value = this.data.autoNumber || '';
             document.getElementById('bl_id').value = this.data.blId || '';
-            document.getElementById('type_chk').value = this.data.typeChk;
+            document.getElementById('type_chk').value = this.data.typeChk || '';
             document.getElementById('prop_search').value = this.data.propSearch || '';
-            
-            this.data.isInitialized = true;
-            
-            console.log('🏢 초기화된 데이터:', {
+
+            this.data.isInitialized = true; // 이제 초기화 완료 플래그 설정
+
+            console.log('🏢 [blpds_update] 초기화된 데이터:', {
                 autoNumber: this.data.autoNumber,
                 blId: this.data.blId,
                 typeChk: this.data.typeChk,
                 propSearch: this.data.propSearch
             });
-            
-            // UI 설정
-            this.setupUI();
-            
-            // 데이터 로드
-            this.loadData();
+
+            this.setupUI(); // UI 먼저 설정
+            this.loadData(); // 데이터 로드 (변경된 데이터로 다시 로드)
         },
         
         // UI 설정
@@ -321,32 +369,72 @@
             const typeChk = this.data.typeChk;
             const typeNameInput = document.getElementById('type_name');
             
-            // 타입별 UI 표시/숨김
-            document.getElementById('image_row_1').style.display = typeChk === '1' ? 'table-row' : 'none';
-            document.getElementById('image_row_2').style.display = typeChk === '1' ? 'table-row' : 'none';
-            document.getElementById('file_row').style.display = typeChk === '3' ? 'table-row' : 'none';
+            console.log('🏢 [blpds_update] setupUI 호출됨, typeChk:', typeChk);
             
-            // 타입 이름 설정
+            document.getElementById('image_row_1').style.display = 'table-row';
+            document.getElementById('image_row_2').style.display = 'table-row';
+            document.getElementById('file_row').style.display = 'table-row';
+            
             let typeName = '';
             if (typeChk === '1') typeName = '이미지관리';
             else if (typeChk === '2') typeName = '이력관리';
             else if (typeChk === '3') typeName = '파일관리';
             
             typeNameInput.value = typeName;
+            console.log('🏢 [blpds_update] UI 요소들 강제 표시됨');
             
-            // 기본사진등록 버튼은 이미지 타입일 때만 활성화
             const defaultPhotoBtn = document.getElementById('btn_default_photo');
             if (defaultPhotoBtn) {
                 defaultPhotoBtn.style.display = typeChk === '1' ? 'inline-block' : 'none';
             }
             
-            // 내용 textarea 높이 조정
             const contentsTextarea = document.getElementById('contents');
             if (typeChk === '2') {
-                contentsTextarea.rows = 15; // 이력관리는 더 크게
+                contentsTextarea.rows = 15;
             } else {
                 contentsTextarea.rows = 5;
             }
+            
+            console.log('🏢 [blpds_update] setupUI 완료');
+        },
+        adjustUIAfterDataLoad: function(actualType) {
+            console.log('🏢 [blpds_update] adjustUIAfterDataLoad 호출됨, actualType:', actualType);
+            
+            if (actualType === '1') {
+                document.getElementById('image_row_1').style.display = 'table-row';
+                document.getElementById('image_row_2').style.display = 'table-row';
+                document.getElementById('file_row').style.display = 'none';
+                
+                const defaultPhotoBtn = document.getElementById('btn_default_photo');
+                if (defaultPhotoBtn) {
+                    defaultPhotoBtn.style.display = 'inline-block';
+                }
+                console.log('🏢 [blpds_update] 이미지관리 UI 활성화');
+                
+            } else if (actualType === '3') {
+                document.getElementById('image_row_1').style.display = 'none';
+                document.getElementById('image_row_2').style.display = 'none';
+                document.getElementById('file_row').style.display = 'table-row';
+                
+                const defaultPhotoBtn = document.getElementById('btn_default_photo');
+                if (defaultPhotoBtn) {
+                    defaultPhotoBtn.style.display = 'none';
+                }
+                console.log('🏢 [blpds_update] 파일관리 UI 활성화');
+                
+            } else if (actualType === '2') {
+                document.getElementById('image_row_1').style.display = 'none';
+                document.getElementById('image_row_2').style.display = 'none';
+                document.getElementById('file_row').style.display = 'none';
+                console.log('🏢 [blpds_update] 이력관리 UI 활성화');
+            }
+            
+            const typeNameInput = document.getElementById('type_name');
+            let typeName = '';
+            if (actualType === '1') typeName = '이미지관리';
+            else if (actualType === '2') typeName = '이력관리';
+            else if (actualType === '3') typeName = '파일관리';
+            typeNameInput.value = typeName;
         },
         
         // 데이터 로드
@@ -356,13 +444,15 @@
                 return;
             }
             
-            console.log('🏢 데이터 로드 시작:', this.data.autoNumber);
-            
+            const autoNumber = parseInt(this.data.autoNumber, 10);
+
+            console.log('🏢 데이터 로드 시작:', autoNumber);
+
             fetch('/fm/blpds_update/get_data', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    auto_number: this.data.autoNumber,
+                    auto_number: autoNumber,
                     bl_id: this.data.blId
                 })
             })
@@ -376,6 +466,12 @@
                     
                     this.populateForm(data.data);
                     this.updatePermissionUI();
+                    
+                    if (data.data.maskname) {
+                        setTimeout(() => {
+                            this.testBl_PdsFile(data.data.maskname);
+                        }, 500);
+                    }
                 } else {
                     this.showError('데이터를 불러올 수 없습니다: ' + data.message);
                 }
@@ -384,6 +480,42 @@
                 console.error('🏢 데이터 로드 오류:', error);
                 this.showError('데이터를 불러오는 중 오류가 발생했습니다.');
             });
+        },
+        testBl_PdsFile: function(maskname) {
+            if (!maskname) return;
+            
+            console.log('🧪 bl_pds 파일 테스트 시작:', maskname);
+            
+            // 1. 디버깅 엔드포인트로 파일 존재 여부 확인
+            fetch(`/debug/check_bl_pds_file/${maskname}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('🔍 bl_pds 파일 체크 결과:', data);
+                })
+                .catch(error => {
+                    console.error('🔴 bl_pds 파일 체크 실패:', error);
+                });
+            
+            // 2. 실제 이미지 URL 테스트
+            const imageUrl = `/bl_pds/${maskname}`;
+            fetch(imageUrl)
+                .then(response => {
+                    console.log('🧪 이미지 URL 테스트 결과:', {
+                        url: imageUrl,
+                        status: response.status,
+                        statusText: response.statusText,
+                        contentType: response.headers.get('content-type')
+                    });
+                    
+                    if (response.ok) {
+                        console.log('✅ 이미지 파일 접근 성공!');
+                    } else {
+                        console.log('🔴 이미지 파일 접근 실패');
+                    }
+                })
+                .catch(error => {
+                    console.error('🔴 이미지 URL 테스트 실패:', error);
+                });
         },
         
         // 폼에 데이터 채우기
@@ -395,37 +527,196 @@
             document.getElementById('maskname').value = data.maskname || '';
             document.getElementById('current_filename').value = data.filename || '';
             
-            // 이미지 표시 (type=1)
-            if (this.data.typeChk === '1') {
-                this.displayImage(data.maskname);
+            console.log('🏢 [blpds_update] populateForm 전체 데이터:', data);
+            console.log('🏢 [blpds_update] 초기화된 타입 (this.data.typeChk):', this.data.typeChk);
+            console.log('🏢 [blpds_update] 데이터베이스 filetype:', data.filetype);
+            console.log('🏢 [blpds_update] filename:', data.filename);
+            console.log('🏢 [blpds_update] maskname:', data.maskname);
+            
+            const actualType = data.filetype || this.data.typeChk;
+            console.log('🏢 [blpds_update] 실제 사용할 타입:', actualType);
+            
+            // ⭐ 실제 타입에 맞게 UI 재조정
+            this.adjustUIAfterDataLoad(actualType);
+            
+            if (actualType === '1') {
+                console.log('🏢 [blpds_update] 이미지관리 타입으로 처리');
+                
+                const imageDisplay = document.getElementById('image_display');
+                console.log('🏢 [blpds_update] 이미지 디스플레이 요소:', imageDisplay);
+                
+                if (data.maskname) {
+                    this.displayImage(data.maskname);
+                    
+                    setTimeout(() => {
+                        const img = imageDisplay.querySelector('img');
+                        console.log('🏢 [blpds_update] 이미지 요소 확인:', img);
+                        if (img) {
+                            console.log('🏢 [blpds_update] 이미지 src:', img.src);
+                            console.log('🏢 [blpds_update] 이미지 complete:', img.complete);
+                            console.log('🏢 [blpds_update] 이미지 naturalWidth:', img.naturalWidth);
+                        }
+                    }, 1000);
+                }
             }
             
-            // 파일 정보 표시 (type=3)
-            if (this.data.typeChk === '3' && data.filename) {
-                this.displayFileInfo(data.filename, this.data.autoNumber);
+            if (actualType === '3') {
+                console.log('🏢 [blpds_update] 파일관리 타입으로 처리');
+                this.displayFileInfoImproved(data.filename, this.data.autoNumber, data.maskname);
+                
+                if (data.filename && data.maskname) {
+                    const extension = data.filename.split('.').pop().toLowerCase();
+                    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
+                    
+                    if (imageExtensions.includes(extension)) {
+                        console.log('🏢 [blpds_update] 파일관리 타입이지만 이미지 파일이므로 미리보기 표시');
+                        this.displayFileAsImage(data.maskname);
+                    }
+                }
             }
         },
-        
-        // 이미지 표시
+        displayFileAsImage: function(maskname) {
+            const fileRow = document.getElementById('file_row');
+            
+            // 기존 이미지 미리보기 행이 있으면 제거
+            const existingImageRow = document.getElementById('file_image_preview_row');
+            if (existingImageRow) {
+                existingImageRow.remove();
+            }
+            
+            if (maskname) {
+                // JSP와 동일한 직접 경로 사용
+                const imageUrl = `/bl_pds/${maskname}`;
+                
+                console.log('🏢 [blpds_update] 파일관리 JSP 방식 이미지 URL:', imageUrl);
+                console.log('🏢 [blpds_update] 파일관리 maskname:', maskname);
+                
+                // 새로운 이미지 미리보기 행 생성
+                const imageRow = document.createElement('tr');
+                imageRow.id = 'file_image_preview_row';
+                imageRow.innerHTML = `
+                    <td class="label">이미지 미리보기</td>
+                    <td colspan="3">
+                        <div class="image-container" style="height: 200px;">
+                            <img src="${imageUrl}" 
+                                alt="이미지 로딩 중..." 
+                                style="max-width: 350px; max-height: 180px; object-fit: contain;"
+                                onerror="console.log('🔴 [blpds_update] 파일관리 이미지 로드 실패:', '${imageUrl}'); this.style.display='none'; this.parentNode.innerHTML='<div class=\\"no-image\\">이미지를 불러올 수 없습니다</div>';"
+                                onload="console.log('✅ [blpds_update] 파일관리 이미지 로드 성공:', '${imageUrl}');">
+                        </div>
+                    </td>
+                `;
+                
+                // 파일 첨부 행 다음에 이미지 미리보기 행 삽입
+                fileRow.parentNode.insertBefore(imageRow, fileRow.nextSibling);
+            }
+        },
+
         displayImage: function(maskname) {
             const imageDisplay = document.getElementById('image_display');
             
+            console.log('🏢 [blpds_update] displayImage 호출됨, maskname:', maskname);
+            console.log('🏢 [blpds_update] imageDisplay 요소:', imageDisplay);
+            
             if (maskname) {
-                imageDisplay.innerHTML = `<img src="/fm/blpds_update/view_file?auto_number=${this.data.autoNumber}" alt="이미지">`;
+                const imageUrl = `/bl_pds/${maskname}`;
+                console.log('🏢 [blpds_update] JSP 방식 이미지 URL:', imageUrl);
+
+                const imageId = `img_${Date.now()}`;
+
+                imageDisplay.innerHTML = `
+                    <img id="${imageId}" 
+                        src="${imageUrl}" 
+                        alt="이미지 로딩 중..." 
+                        style="max-width: 400px; max-height: 240px; object-fit: contain; border: 2px solid #007bff;">`;
+
+                setTimeout(() => {
+                    const img = document.getElementById(imageId);
+                    if (img) {
+                        img.addEventListener('load', () => {
+                            console.log('✅ [blpds_update] 이미지 로드 성공:', imageUrl, 'ID:', imageId, '크기:', img.naturalWidth + 'x' + img.naturalHeight);
+                            img.style.border = '2px solid #28a745';
+                        });
+
+                        img.addEventListener('error', () => {
+                            console.log('🔴 [blpds_update] 이미지 로드 실패:', imageUrl, 'ID:', imageId);
+                            img.style.display = 'none';
+                            imageDisplay.innerHTML = `<div class="no-image" style="padding: 20px; border: 2px solid #dc3545;">이미지를 불러올 수 없습니다<br>URL: ${imageUrl}</div>`;
+                        });
+                    }
+                }, 100); 
             } else {
-                imageDisplay.innerHTML = '<div class="no-image">이미지 없음</div>';
+                console.log('🏢 [blpds_update] maskname이 없음, 기본 메시지 표시');
+                imageDisplay.innerHTML = '<div class="no-image" style="padding: 20px; border: 2px solid #dc3545;">이미지 없음</div>';
             }
         },
+
+
+        displayFileInfoImproved: function(filename, autoNumber, maskname) {
+            const fileInfo = document.getElementById('current_file_info');
+            const fileLink = document.getElementById('current_file_link');
+            
+            console.log('🏢 [blpds_update] displayFileInfoImproved 호출됨:', { filename, autoNumber, maskname });
+            
+            if (filename && autoNumber) {
+                const parsedAutoNumber = parseInt(autoNumber, 10);
+                fileLink.textContent = filename;
+                fileLink.href = `/fm/blpds_update/download_file?auto_number=${parsedAutoNumber}`;
+                fileInfo.style.display = 'block';
+                
+                console.log('🏢 [blpds_update] 파일 다운로드 링크 설정됨:', fileLink.href);
+                
+                if (maskname) {
+                    const additionalInfo = document.createElement('div');
+                    additionalInfo.style.fontSize = '11px';
+                    additionalInfo.style.color = '#666';
+                    additionalInfo.style.marginTop = '5px';
+                    additionalInfo.textContent = `실제 파일: ${maskname}`;
+                    
+                    const existingInfo = fileInfo.querySelector('.additional-file-info');
+                    if (existingInfo) existingInfo.remove();
+                    
+                    additionalInfo.className = 'additional-file-info';
+                    fileInfo.appendChild(additionalInfo);
+                }
+                
+            } else {
+                console.log('🔴 [blpds_update] 파일 정보 표시 실패');
+                fileInfo.style.display = 'none';
+            }
+        },
+
+        displayImageWithFile: function(filename) {
+            const imageDisplay = document.getElementById('image_display');
+            
+            if (filename) {
+                const imageUrl = `/bl_pds/${filename}`;
+                
+                console.log('🏢 [blpds_update] 직접 파일명으로 이미지 URL:', imageUrl);
+                
+                imageDisplay.innerHTML = `
+                    <img src="${imageUrl}" 
+                        alt="이미지 로딩 중..." 
+                        style="max-width: 400px; max-height: 240px; object-fit: contain;"
+                        onerror="console.log('🔴 [blpds_update] 직접 파일명 이미지 로드 실패:', '${imageUrl}'); this.style.display='none'; this.parentNode.innerHTML='<div class=\\"no-image\\">이미지를 불러올 수 없습니다</div>';"
+                        onload="console.log('✅ [blpds_update] 직접 파일명 이미지 로드 성공:', '${imageUrl}');">`;
+            }
+        },
+
         
         // 파일 정보 표시
         displayFileInfo: function(filename, autoNumber) {
             const fileInfo = document.getElementById('current_file_info');
             const fileLink = document.getElementById('current_file_link');
             
-            if (filename) {
+            if (filename && autoNumber) {
+                // 정수로 변환된 auto_number 사용
+                const parsedAutoNumber = parseInt(autoNumber, 10);
                 fileLink.textContent = filename;
-                fileLink.href = `/fm/blpds_update/download_file?auto_number=${autoNumber}`;
+                fileLink.href = `/fm/blpds_update/download_file?auto_number=${parsedAutoNumber}`;
                 fileInfo.style.display = 'block';
+                
+                console.log('🏢 [blpds_update] 파일 다운로드 링크:', fileLink.href);
             } else {
                 fileInfo.style.display = 'none';
             }
@@ -661,10 +952,25 @@
     
     // 전역 초기화 함수 등록
     window.initBlpdsUpdatePage = function(params) {
+        console.log('🏢 [blpds_update] window.initBlpdsUpdatePage 호출됨 (외부에서):', params);
+        // 이 함수가 호출된다면, 전달된 params를 사용하여 init을 수행합니다.
         window.BlpdsUpdateModule.init(params);
     };
-    
-    console.log('🏢 BlpdsUpdateModule 로드 완료');
-    
-})(); // 즉시 실행 함수 끝
+    setTimeout(function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const auto_number_from_url = urlParams.get('auto_number');
+        
+        // URL에 auto_number가 있으면 무조건 초기화
+        if (auto_number_from_url && auto_number_from_url !== 'null' && auto_number_from_url !== 'undefined') {
+            console.log('🏢 [blpds_update] URL 파라미터로 강제 초기화:', auto_number_from_url);
+            window.BlpdsUpdateModule.data.isInitialized = false;
+            window.BlpdsUpdateModule.init();
+        } else if (!window.BlpdsUpdateModule.data.isInitialized) {
+            console.log('🏢 [blpds_update] setTimeout을 통한 자동 초기화 시도');
+            window.BlpdsUpdateModule.init();
+        }
+    }, 100);
+
+    console.log('🏢 [blpds_update] BlpdsUpdateModule 로드 완료');
+})();
 </script>

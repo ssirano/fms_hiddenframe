@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>입주사 정보</title>
+    <link rel="stylesheet" href="/static/css/common.css">
+    <style>
+        /* rmtenant_list 스타일 - rm_list와 일관성 맞춤 */
+        #rmtenant_list_outer {
+            padding: 20px;
+            padding-bottom: 0;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            font-size: 12px;
+        }
+
+        /* 상단 영역 */
+        #rmtenant_list_outer .top-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        #rmtenant_list_outer .top-area .left-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        #rmtenant_list_outer .top-area label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #495057;
+            white-space: nowrap;
+        }
+
+        #rmtenant_list_outer .top-area select {
+            height: 32px;
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+            min-width: 120px;
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+
+        #rmtenant_list_outer .top-area input[type="text"] {
+            height: 32px;
+            padding: 0 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            min-width: 200px;
+            font-size: 12px;
+        }
+
+        #rmtenant_list_outer .top-area button {
+            height: 32px;
+            padding: 0 12px;
+            background: #fff;
+            color: #333;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+            margin-left: 5px;
+        }
+
+        #rmtenant_list_outer .top-area button:hover {
+            background-color: #e9ecef;
+            border-color: #adb5bd;
+        }
+        
+        #rmtenant_list_outer .top-area button.btn-primary {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        #rmtenant_list_outer .top-area button.btn-primary:hover {
+            background: #0056b3;
+            border-color: #004085;
+        }
+
+        /* 메인 영역 */
+        #rmtenant_list_outer .main-area {
+            background-color: white;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+            padding: 20px;
+            height: calc(100vh - 200px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 데이터 테이블 영역 */
+        #rmtenant_list_outer .data-table-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #rmtenant_list_outer .data-table {
+            flex: 1;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+
+        #rmtenant_list_outer .data-table .table-header {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            font-weight: bold;
+            font-size: 12px;
+            height: 40px;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        #rmtenant_list_outer .data-table .table-header .header-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            border-right: 1px solid #dee2e6;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+        }
+
+        #rmtenant_list_outer .data-table .table-header .header-cell:hover {
+            background-color: #e9ecef;
+        }
+
+        #rmtenant_list_outer .data-table .table-header .header-cell:last-child {
+            border-right: none;
+        }
+
+        /* 정렬 아이콘 */
+        #rmtenant_list_outer .data-table .sort-icon {
+            position: absolute;
+            right: 8px;
+            width: 12px;
+            height: 12px;
+            cursor: pointer;
+        }
+
+        #rmtenant_list_outer .data-table .sort-both::after { 
+            content: '⇅'; 
+            color: #999; 
+            font-size: 10px;
+        }
+        #rmtenant_list_outer .data-table .sort-asc::after { 
+            content: '▲'; 
+            color: #007bff; 
+            font-size: 8px;
+        }
+        #rmtenant_list_outer .data-table .sort-desc::after { 
+            content: '▼'; 
+            color: #007bff; 
+            font-size: 8px;
+        }
+
+        /* 테이블 본문 */
+        #rmtenant_list_outer .data-table .table-content {
+            display: block;
+        }
+
+        #rmtenant_list_outer .data-table .table-row {
+            display: flex;
+            border-bottom: 1px solid #dee2e6;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            min-height: 36px;
+            align-items: center;
+        }
+
+        #rmtenant_list_outer .data-table .table-row:hover {
+            background-color: #f8f9fa;
+        }
+
+        #rmtenant_list_outer .data-table .table-row.selected {
+            background-color: #e3f2fd;
+            border-left: 3px solid #2196f3;
+        }
+
+        #rmtenant_list_outer .data-table .table-cell {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border-right: 1px solid #dee2e6;
+            font-size: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        #rmtenant_list_outer .data-table .table-cell:last-child {
+            border-right: none;
+        }
+
+        /* 텍스트 정렬 */
+        #rmtenant_list_outer .data-table .text-center { justify-content: center; }
+        #rmtenant_list_outer .data-table .text-left { justify-content: flex-start; }
+        #rmtenant_list_outer .data-table .text-right { justify-content: flex-end; }
+
+        /* 컬럼 너비 (rmtenant_list에 맞게 조정) */
+        #rmtenant_list_outer .data-table .col-building { width: 15%; }
+        #rmtenant_list_outer .data-table .col-floor { width: 15%; }
+        #rmtenant_list_outer .data-table .col-room { width: 7%; }
+        #rmtenant_list_outer .data-table .col-tenant { width: 30%; }
+        #rmtenant_list_outer .data-table .col-move-in { width: 10%; }
+        #rmtenant_list_outer .data-table .col-move-out { width: 10%; }
+        #rmtenant_list_outer .data-table .col-area { width: 13%; }
+
+        /* 빈 데이터 메시지 */
+        #rmtenant_list_outer .data-table .empty-message {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100px;
+            color: #6c757d;
+            font-size: 14px;
+            border-bottom: none;
+        }
+
+        /* 페이지네이션 영역 */
+        #rmtenant_list_outer .pagination-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #dee2e6;
+            flex-shrink: 0;
+        }
+
+        #rmtenant_list_outer .pagination-area .pagination-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #rmtenant_list_outer .pagination-area label {
+            font-size: 12px;
+            color: #495057;
+            white-space: nowrap;
+        }
+
+        #rmtenant_list_outer .pagination-area select {
+            width: 80px;
+            height: 32px;
+            border-radius: 4px;
+            border: 1px solid #ced4da;
+            font-size: 12px;
+        }
+
+        #rmtenant_list_outer .pagination-area .page-info {
+            font-size: 12px;
+            color: #495057;
+        }
+
+        #rmtenant_list_outer .pagination-area .page-info .highlight {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        /* 페이지네이션 버튼 */
+        #rmtenant_list_outer .pagination {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+
+        #rmtenant_list_outer .pagination .page-btn {
+            width: 32px;
+            height: 32px;
+            border: 1px solid #dee2e6;
+            background: white;
+            color: #495057;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.15s ease;
+        }
+
+        #rmtenant_list_outer .pagination .page-btn:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+
+        #rmtenant_list_outer .pagination .page-btn.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        #rmtenant_list_outer .pagination .page-btn.disabled {
+            background: #f8f9fa;
+            color: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        /* 로딩 표시 */
+        #rmtenant_list_outer .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        #rmtenant_list_outer .loading .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 반응형 */
+        @media (max-width: 768px) {
+            #rmtenant_list_outer {
+                padding: 10px;
+            }
+            
+            #rmtenant_list_outer .top-area {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="rmtenant_list_outer">
+        <div class="top-area">
+            <div class="left-section">
+                <label for="rmtenant_move_status">입주정보</label>
+                <select id="rmtenant_move_status">
+                    <option value="전체">전체</option>
+                    <option value="입실" selected>입실</option>
+                    <option value="퇴실">퇴실</option>
+                </select>
+                <label for="rmtenant_bl_select">건물</label>
+                <select id="rmtenant_bl_select">
+                    <option value="">건물전체</option>
+                </select>
+                <label for="rmtenant_fl_select">층</label>
+                <select id="rmtenant_fl_select">
+                    <option value="">층전체</option>
+                </select>
+                <label for="rmtenant_rm_select">실</label>
+                <select id="rmtenant_rm_select">
+                    <option value="">실전체</option>
+                </select>
+                <label for="rmtenant_search_keyword">입주사 검색:</label>
+                <input type="text" id="rmtenant_search_keyword" placeholder="입주사명 검색">
+            </div>
+            <div class="right-section">
+                <button type="button" id="rmtenant_btn_search">검색</button>
+                <button type="button" id="rmtenant_btn_reset">초기화</button>
+                <button type="button" id="rmtenant_btn_register" class="btn-primary">입주사등록</button>
+            </div>
+        </div>
+
+        <div class="main-area">
+            <div class="data-table-wrapper">
+                <div class="data-table">
+                    <div class="table-header">
+                        <div class="header-cell col-building text-center" data-sort="bl_name">
+                            <span>건물</span>
+                            <div class="sort-icon sort-both"></div>
+                        </div>
+                        <div class="header-cell col-floor text-center" data-sort="fl_name">
+                            <span>층</span>
+                            <div class="sort-icon sort-both"></div>
+                        </div>
+                        <div class="header-cell col-room text-center" data-sort="rm_name">
+                            <span>실</span>
+                            <div class="sort-icon sort-both"></div>
+                        </div>
+                        <div class="header-cell col-tenant text-center" data-sort="tenant_name">
+                            <span>입주사명</span>
+                            <div class="sort-icon sort-both"></div>
+                        </div>
+                        <div class="header-cell col-move-in text-center" data-sort="move_in">
+                            <span>입실일자</span>
+                            <div class="sort-icon sort-both"></div>
+                        </div>
+                        <div class="header-cell col-move-out text-center" data-sort="move_out">
+                            <span>퇴실일자</span>
+                            <div class="sort-icon sort-both"></div>
+                        </div>
+                        <div class="header-cell col-area text-center" data-sort="area_lease_local">
+                            <span>임대면적(평)</span>
+                            <div class="sort-icon sort-both"></div>
+                        </div>
+                    </div>
+
+                    <div class="table-content" id="rmtenant_table_content">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            입주사 정보를 불러오는 중...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pagination-area">
+                    <div class="pagination-left">
+                        <label for="rmtenant_page_size">페이지당 목록 수:</label>
+                        <select id="rmtenant_page_size">
+                            <option value="10">10</option>
+                            <option value="20" selected>20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="All">전체</option>
+                        </select>
+                    </div>
+
+                    <div class="pagination" id="rmtenant_pagination">
+                    </div>
+
+                    <div class="page-info">
+                        전체 <span class="highlight" id="rmtenant_total_count">0</span>개 | 
+                        <span class="highlight" id="rmtenant_current_page">1</span> / 
+                        <span class="highlight" id="rmtenant_total_pages">1</span> 페이지
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // 🛡️ 완전한 스코프 분리 - 변수 충돌 방지
+    (function() {
+        'use strict';
+        
+        console.log('🏢 rmtenant_list.html 스크립트 시작!');
+        
+        // 🔥 기존 RmtenantListModule 완전 제거 후 재생성
+        if (typeof window.RmtenantListModule !== 'undefined') {
+            console.log('🏢 기존 RmtenantListModule 완전 제거');
+            if (window.RmtenantListModule.cleanup && typeof window.RmtenantListModule.cleanup === 'function') {
+                window.RmtenantListModule.cleanup();
+            }
+            delete window.RmtenantListModule;
+        }
+        
+        // 모듈 생성
+        window.RmtenantListModule = {
+            // 데이터 저장소
+            data: {
+                currentPage: 1,
+                totalPages: 1,
+                totalCount: 0,
+                pageSize: 20,
+                sortColumn: null,
+                sortDirection: 'both',
+                blList: [],
+                flList: [],
+                rmList: [],
+                rmtenantList: [],
+                isInitialized: false,
+                lastClickTime: 0,
+                lastClickKey: null,
+                moduleId: 'rmtenant_list_' + Date.now()
+            },
+            
+            // 🔧 안전한 DOM 접근 헬퍼
+            safeGetElement: function(id) {
+                try {
+                    const element = document.getElementById(id);
+                    if (!element) {
+                        console.warn('🏢 [RT] DOM 요소를 찾을 수 없음:', id);
+                    }
+                    return element;
+                } catch (error) {
+                    console.error('🏢 [RT] DOM 접근 오류:', error);
+                    return null;
+                }
+            },
+
+            // 초기화
+            init: function() {
+                console.log('🏢 [RT] 입주사 목록 페이지 초기화 시작');
+                
+                const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                const prop_id = window.currentPropId;
+                
+                console.log('🏢 [RT] 받은 데이터 (초기화):', { em_id, prop_id });
+                
+                if (!em_id) {
+                    console.error('🏢 [RT] em_id가 없습니다.');
+                    this.showError('사용자 정보를 불러올 수 없습니다.');
+                    return;
+                }
+                
+                if (!prop_id) {
+                    console.error('🏢 [RT] prop_id가 없습니다.');
+                    this.showError('사업소를 선택해주세요.');
+                    return;
+                }
+                
+                this.data.isInitialized = true;
+                
+                // 이벤트 리스너 등록
+                this.bindEvents();
+                
+                // 건물 목록 로드
+                this.loadBuildingList();
+                
+                // 입주사 데이터 로드
+                this.loadRmtenantData('read');
+            },
+            
+            // 데이터 새로고침
+            refreshData: function() {
+                console.log('🏢 [RT] 입주사 데이터 새로고침');
+                this.loadBuildingList();
+                this.loadRmtenantData('read');
+            },
+            
+            // 이벤트 리스너 등록
+            bindEvents: function() {
+                // 검색 버튼
+                const btnSearch = this.safeGetElement('rmtenant_btn_search');
+                if (btnSearch) {
+                    btnSearch.onclick = () => {
+                        this.data.currentPage = 1;
+                        this.loadRmtenantData('search');
+                    };
+                }
+                
+                // 검색 입력 엔터키
+                const searchInput = this.safeGetElement('rmtenant_search_keyword');
+                if (searchInput) {
+                    searchInput.onkeypress = (e) => {
+                        if (e.key === 'Enter') {
+                            this.data.currentPage = 1;
+                            this.loadRmtenantData('search');
+                        }
+                    };
+                }
+                
+                // 초기화 버튼
+                const btnReset = this.safeGetElement('rmtenant_btn_reset');
+                if (btnReset) {
+                    btnReset.onclick = () => {
+                        this.resetFilters();
+                    };
+                }
+
+                // 등록 버튼
+                const btnRegister = this.safeGetElement('rmtenant_btn_register');
+                if (btnRegister) {
+                    btnRegister.onclick = () => {
+                        if (window.tabManager && typeof window.tabManager.addTab === 'function') {
+                            window.tabManager.addTab('/fm/rmtenant_insert.html', '입주사등록');
+                        } else {
+                            window.location.href = '/fm/rmtenant_insert.html';
+                        }
+                    };
+                }
+                
+                // 입주상태 변경
+                const moveStatusSelect = this.safeGetElement('rmtenant_move_status');
+                if (moveStatusSelect) {
+                    moveStatusSelect.onchange = () => {
+                        this.data.currentPage = 1;
+                        this.loadRmtenantData('search');
+                    };
+                }
+                
+                // 건물 선택 변경
+                const blSelect = this.safeGetElement('rmtenant_bl_select');
+                if (blSelect) {
+                    blSelect.onchange = () => {
+                        this.loadFloorList(blSelect.value);
+                        this.clearRoomList();
+                        this.data.currentPage = 1;
+                        this.loadRmtenantData('search');
+                    };
+                }
+                
+                // 층 선택 변경
+                const flSelect = this.safeGetElement('rmtenant_fl_select');
+                if (flSelect) {
+                    flSelect.onchange = () => {
+                        this.loadRoomList(flSelect.value);
+                        this.data.currentPage = 1;
+                        this.loadRmtenantData('search');
+                    };
+                }
+                
+                // 실 선택 변경
+                const rmSelect = this.safeGetElement('rmtenant_rm_select');
+                if (rmSelect) {
+                    rmSelect.onchange = () => {
+                        this.data.currentPage = 1;
+                        this.loadRmtenantData('search');
+                    };
+                }
+                
+                // 페이지 크기 변경
+                const pageSizeSelect = this.safeGetElement('rmtenant_page_size');
+                if (pageSizeSelect) {
+                    pageSizeSelect.onchange = () => {
+                        this.data.currentPage = 1;
+                        this.data.pageSize = pageSizeSelect.value;
+                        this.loadRmtenantData('search');
+                    };
+                }
+                
+                // 정렬 클릭 이벤트
+                const container = document.getElementById('rmtenant_list_outer');
+                if (container) {
+                    const headers = container.querySelectorAll('.header-cell[data-sort]');
+                    headers.forEach(header => {
+                        header.onclick = () => {
+                            const sortColumn = header.dataset.sort;
+                            this.handleSort(sortColumn);
+                        };
+                    });
+                }
+                
+                console.log('🏢 [RT] 이벤트 리스너 등록 완료');
+            },
+            
+            // 건물 목록 로드
+            loadBuildingList: function() {
+                const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                const prop_id = window.currentPropId;
+                
+                if (!em_id || !prop_id) {
+                    console.error('🔴 [RT] 필수 파라미터 누락:', { em_id, prop_id });
+                    return;
+                }
+                
+                fetch('fm/rmtenant_list/get_bl_list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ em_id: em_id, prop_id: prop_id })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🏢 [RT] 건물 목록 응답:', data);
+                    if (data && data.success) {
+                        this.data.blList = data.data || [];
+                        this.renderBuildingSelect(data.data || []);
+                    } else {
+                        console.error('🏢 [RT] 건물 목록 로드 실패:', data ? data.message : 'Unknown error');
+                        this.renderBuildingSelect([]);
+                    }
+                })
+                .catch(error => {
+                    console.error('🏢 [RT] 건물 목록 로드 오류:', error);
+                    this.renderBuildingSelect([]);
+                });
+            },
+            
+            // 건물 선택 옵션 렌더링
+            renderBuildingSelect: function(buildings) {
+                const select = this.safeGetElement('rmtenant_bl_select');
+                if (!select) return;
+                select.innerHTML = '<option value="">건물전체</option>';
+                
+                buildings.forEach(building => {
+                    const option = document.createElement('option');
+                    option.value = building.bl_id;
+                    option.textContent = `${building.bl_name} (${building.bl_id})`;
+                    select.appendChild(option);
+                });
+            },
+
+            // 층 목록 로드
+            loadFloorList: function(blId) {
+                const prop_id = window.currentPropId;
+                const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                
+                const flSelect = this.safeGetElement('rmtenant_fl_select');
+                if (!flSelect) return;
+                flSelect.innerHTML = '<option value="">층전체</option>';
+                this.data.flList = [];
+
+                if (!prop_id || !blId) {
+                    console.warn('🏢 [RT] 층 목록 로드 파라미터 부족:', { prop_id, blId });
+                    return;
+                }
+
+                fetch('fm/rmtenant_list/get_fl_list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prop_id: prop_id, em_id: em_id, bl_id: blId })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🏢 [RT] 층 목록 응답:', data);
+                    if (data && data.success) {
+                        this.data.flList = data.data || [];
+                        this.renderFloorSelect(data.data || []);
+                    } else {
+                        console.error('🏢 [RT] 층 목록 로드 실패:', data ? data.message : 'Unknown error');
+                        this.renderFloorSelect([]);
+                    }
+                })
+                .catch(error => {
+                    console.error('🏢 [RT] 층 목록 로드 오류:', error);
+                    this.renderFloorSelect([]);
+                });
+            },
+
+            // 층 선택 옵션 렌더링
+            renderFloorSelect: function(floors) {
+                const select = this.safeGetElement('rmtenant_fl_select');
+                if (!select) return;
+                select.innerHTML = '<option value="">층전체</option>';
+                
+                floors.forEach(floor => {
+                    const option = document.createElement('option');
+                    option.value = floor.fl_id;
+                    option.textContent = `${floor.fl_name} (${floor.fl_id})`;
+                    select.appendChild(option);
+                });
+            },
+
+            // 실 목록 로드
+            loadRoomList: function(flId) {
+                const prop_id = window.currentPropId;
+                const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                const blId = this.safeGetElement('rmtenant_bl_select').value;
+                
+                const rmSelect = this.safeGetElement('rmtenant_rm_select');
+                if (!rmSelect) return;
+                rmSelect.innerHTML = '<option value="">실전체</option>';
+                this.data.rmList = [];
+
+                if (!prop_id || !blId || !flId) {
+                    console.warn('🏢 [RT] 실 목록 로드 파라미터 부족:', { prop_id, blId, flId });
+                    return;
+                }
+
+                fetch('fm/rmtenant_list/get_rm_list', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prop_id: prop_id, em_id: em_id, bl_id: blId, fl_id: flId })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🏢 [RT] 실 목록 응답:', data);
+                    if (data && data.success) {
+                        this.data.rmList = data.data || [];
+                        this.renderRoomSelect(data.data || []);
+                    } else {
+                        console.error('🏢 [RT] 실 목록 로드 실패:', data ? data.message : 'Unknown error');
+                        this.renderRoomSelect([]);
+                    }
+                })
+                .catch(error => {
+                    console.error('🏢 [RT] 실 목록 로드 오류:', error);
+                    this.renderRoomSelect([]);
+                });
+            },
+
+            // 실 선택 옵션 렌더링
+            renderRoomSelect: function(rooms) {
+                const select = this.safeGetElement('rmtenant_rm_select');
+                if (!select) return;
+                select.innerHTML = '<option value="">실전체</option>';
+                
+                rooms.forEach(room => {
+                    const option = document.createElement('option');
+                    option.value = room.rm_id;
+                    option.textContent = `${room.rm_name} (${room.rm_id})`;
+                    select.appendChild(option);
+                });
+            },
+
+            // 실 목록 초기화
+            clearRoomList: function() {
+                const rmSelect = this.safeGetElement('rmtenant_rm_select');
+                if (rmSelect) {
+                    rmSelect.innerHTML = '<option value="">실전체</option>';
+                }
+                this.data.rmList = [];
+            },
+            
+            // 입주사 데이터 로드
+            loadRmtenantData: function(mode = 'read') {
+                const em_id = window.currentEmId || (window.userInfo && window.userInfo.em_id);
+                const prop_id = window.currentPropId;
+                
+                if (!em_id || !prop_id) {
+                    console.warn('🏢 [RT] 필수 파라미터 누락:', { em_id, prop_id });
+                    this.showError('사용자 정보 또는 사업장 정보가 없습니다.');
+                    return;
+                }
+                
+                this.showLoading();
+                
+                const requestData = {
+                    em_id: em_id,
+                    prop_id: prop_id,
+                    page_size: this.data.pageSize,
+                    page_number: this.data.currentPage
+                };
+                
+                // 검색 조건 추가
+                if (mode === 'search' || mode === 'read') {
+                    const moveStatusSelect = this.safeGetElement('rmtenant_move_status');
+                    const blSelect = this.safeGetElement('rmtenant_bl_select');
+                    const flSelect = this.safeGetElement('rmtenant_fl_select');
+                    const rmSelect = this.safeGetElement('rmtenant_rm_select');
+                    const keywordInput = this.safeGetElement('rmtenant_search_keyword');
+                    
+                    if (moveStatusSelect && moveStatusSelect.value) {
+                        requestData.move_status = moveStatusSelect.value;
+                    }
+                    if (blSelect && blSelect.value) {
+                        requestData.bl_id = blSelect.value;
+                    }
+                    if (flSelect && flSelect.value) {
+                        requestData.fl_id = flSelect.value;
+                    }
+                    if (rmSelect && rmSelect.value) {
+                        requestData.rm_id = rmSelect.value;
+                    }
+                    if (keywordInput && keywordInput.value.trim()) {
+                        requestData.keyword = keywordInput.value.trim();
+                    }
+                }
+                
+                // 정렬 조건 추가
+                if (this.data.sortColumn && this.data.sortDirection !== 'both') {
+                    requestData.sort_column = this.data.sortColumn;
+                    requestData.sort_direction = this.data.sortDirection;
+                }
+                
+                console.log('🏢 [RT] 입주사 데이터 요청:', { requestData });
+                
+                fetch('fm/rmtenant_list/get_rmtenant_data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestData)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('🏢 [RT] 입주사 데이터 응답:', data);
+                    if (data && data.success) {
+                        this.data.rmtenantList = data.result_data || [];
+                        this.data.currentPage = data.current_page || 1;
+                        this.data.totalPages = data.total_pages || 1;
+                        this.data.totalCount = data.total_count || 0;
+                        
+                        this.renderRmtenantTable(this.data.rmtenantList);
+                        this.renderPagination();
+                        this.updateCountInfo();
+                        
+                        console.log('🏢 [RT] 입주사 데이터 로드 완료:', (this.data.rmtenantList || []).length, '개');
+                    } else {
+                        console.error('🏢 [RT] 입주사 데이터 로드 실패:', data ? data.message : 'Unknown error');
+                        this.showError(`데이터를 불러올 수 없습니다: ${data ? data.message : 'Unknown error'}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('🏢 [RT] 입주사 데이터 로드 오류:', error);
+                    this.showError(`데이터를 불러오는 중 오류가 발생했습니다: ${error.message}`);
+                });
+            },
+            
+            // 입주사 테이블 렌더링
+            renderRmtenantTable: function(rmtenantData) {
+                const tableContent = this.safeGetElement('rmtenant_table_content');
+                if (!tableContent) return;
+
+                if (!rmtenantData || rmtenantData.length === 0) {
+                    tableContent.innerHTML = `
+                        <div class="empty-message">
+                            검색 결과가 없습니다.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = '';
+                
+                rmtenantData.forEach(rmtenant => {
+                    const blDisplay = rmtenant.bl_name ? `${rmtenant.bl_name} (${rmtenant.bl_id})` : '';
+                    const flDisplay = rmtenant.fl_name ? `${rmtenant.fl_name} (${rmtenant.fl_id})` : '';
+                    const rmDisplay = rmtenant.rm_name ? `${rmtenant.rm_name} (${rmtenant.rm_id})` : '';
+                    
+                    html += `
+                        <div class="table-row" 
+                            data-rmtenant-id="${rmtenant.rmtenant_id}"
+                            data-prop-id="${rmtenant.prop_id}"
+                            data-bl-id="${rmtenant.bl_id}"
+                            data-fl-id="${rmtenant.fl_id}"
+                            data-rm-id="${rmtenant.rm_id}"
+                            data-tenant-name="${rmtenant.tenant_name || ''}"
+                            onclick="RmtenantListModule.selectRmtenant(this)">
+                            <div class="table-cell col-building text-left">${blDisplay}</div>
+                            <div class="table-cell col-floor text-left">${flDisplay}</div>
+                            <div class="table-cell col-room text-left">${rmDisplay}</div>
+                            <div class="table-cell col-tenant text-left">${rmtenant.tenant_name || ''}</div>
+                            <div class="table-cell col-move-in text-center">${rmtenant.move_in || ''}</div>
+                            <div class="table-cell col-move-out text-center">${rmtenant.move_out || ''}</div>
+                            <div class="table-cell col-area text-right">${rmtenant.area_lease_local || ''}</div>
+                        </div>
+                    `;
+                });
+                
+                tableContent.innerHTML = html;
+            },
+            
+            // 입주사 선택 (클릭 시 rmtenant_update 페이지로 이동)
+            selectRmtenant: function(element) {
+                const rmtenantId = element.dataset.rmtenantId;
+                
+                if (!rmtenantId) {
+                    console.log('🔴 [RT] 입주사 ID가 없습니다.');
+                    return;
+                }
+                
+                // 중복 클릭 방지
+                const clickKey = `rmtenant_${rmtenantId}`;
+                if (this.data.lastClickKey === clickKey && (Date.now() - this.data.lastClickTime) < 1000) {
+                    console.log('🟡 [RT] 중복 클릭 방지');
+                    return;
+                }
+                
+                this.data.lastClickKey = clickKey;
+                this.data.lastClickTime = Date.now();
+                
+                console.log('🔵 [RT] 입주사 선택됨:', { rmtenantId });
+                
+                // 선택 표시
+                const container = document.getElementById('rmtenant_list_outer');
+                if (container) {
+                    container.querySelectorAll('.table-row').forEach(row => {
+                        row.classList.remove('selected');
+                    });
+                }
+                element.classList.add('selected');
+                
+                // rmtenant_update 페이지로 이동
+                this.navigateToRmtenantUpdate(rmtenantId);
+            },
+            
+            // rmtenant_update로 이동
+            navigateToRmtenantUpdate: function(rmtenantId) {
+                try {
+                    const cleanRmtenantId = parseInt(parseFloat(rmtenantId));
+                    window.selected_rmtenant_id = cleanRmtenantId;
+                    
+                    console.log('🟢 [RT] rmtenant_update로 이동:', { rmtenantId: cleanRmtenantId });
+                    
+                    if (window.tabManager && typeof window.tabManager.addTab === 'function') {
+                        const url = `/fm/rmtenant_update.html`;
+                        const title = `입주사수정(${cleanRmtenantId})`;
+                        
+                        // 🔥 기존 rmtenant_update 탭 완전 제거 (여러 방법 시도)
+                        if (window.tabManager.removeTabsByPattern) {
+                            window.tabManager.removeTabsByPattern('fm/rmtenant_update.html');
+                        }
+                        
+                        // 추가: 직접 탭 ID로도 제거 시도
+                        const updateTabId = 'tab__fm_rmtenant_update_html';
+                        if (window.tabManager.removeTab) {
+                            window.tabManager.removeTab(updateTabId);
+                        }
+                        
+                        // 모든 rmtenant_update 관련 탭 강제 제거
+                        if (window.tabManager.tabs instanceof Map) {
+                            const tabsToRemove = [];
+                            for (const [tabId, tab] of window.tabManager.tabs.entries()) {
+                                if (tabId.includes('rmtenant_update') || 
+                                    (tab.url && tab.url.includes('rmtenant_update'))) {
+                                    tabsToRemove.push(tabId);
+                                }
+                            }
+                            tabsToRemove.forEach(tabId => {
+                                if (window.tabManager.removeTab) {
+                                    window.tabManager.removeTab(tabId);
+                                }
+                            });
+                        }
+                        
+                        // 새 탭 생성 (지연 시간 증가)
+                        setTimeout(() => {
+                            window.tabManager.addTab(url, title);
+                        }, 200);  // 100ms → 200ms로 증가
+                        
+                    } else if (typeof window.loadContent === 'function') {
+                        const url = `/fm/rmtenant_update.html`;
+                        window.loadContent(url, `입주사수정(${cleanRmtenantId})`);
+                        
+                    } else {
+                        console.error('🔴 [RT] 탭 생성 함수를 찾을 수 없습니다.');
+                    }
+                    
+                } catch (error) {
+                    console.error('🔴 [RT] rmtenant_update 이동 중 오류:', error);
+                }
+            },
+            
+            // 정렬 처리
+            handleSort: function(column) {
+                if (this.data.sortColumn === column) {
+                    if (this.data.sortDirection === 'both') {
+                        this.data.sortDirection = 'asc';
+                    } else if (this.data.sortDirection === 'asc') {
+                        this.data.sortDirection = 'desc';
+                    } else {
+                        this.data.sortDirection = 'both';
+                    }
+                } else {
+                    this.data.sortColumn = column;
+                    this.data.sortDirection = 'asc';
+                }
+                
+                this.updateSortIcons();
+                this.data.currentPage = 1;
+                this.loadRmtenantData('search');
+                
+                console.log('🔄 [RT] 정렬 변경:', { column, direction: this.data.sortDirection });
+            },
+            
+            // 정렬 아이콘 업데이트
+            updateSortIcons: function() {
+                const container = document.getElementById('rmtenant_list_outer');
+                if (!container) return;
+                
+                container.querySelectorAll('.sort-icon').forEach(icon => {
+                    icon.className = 'sort-icon sort-both';
+                });
+                
+                if (this.data.sortColumn) {
+                    const headerCell = container.querySelector(`[data-sort="${this.data.sortColumn}"]`);
+                    if (headerCell) {
+                        const icon = headerCell.querySelector('.sort-icon');
+                        if (icon) {
+                            icon.className = `sort-icon sort-${this.data.sortDirection}`;
+                        }
+                    }
+                }
+            },
+            
+            // 페이지네이션 렌더링
+            renderPagination: function() {
+                const pagination = this.safeGetElement('rmtenant_pagination');
+                if (!pagination) return;
+                
+                if (this.data.pageSize === 'All' || this.data.totalPages <= 1) {
+                    pagination.innerHTML = '';
+                    return;
+                }
+                
+                let html = '';
+                const currentPage = this.data.currentPage;
+                const totalPages = this.data.totalPages;
+                
+                // 이전 버튼
+                html += `
+                    <button class="page-btn ${currentPage <= 1 ? 'disabled' : ''}" 
+                            onclick="RmtenantListModule.goToPage(${currentPage - 1})" 
+                            ${currentPage <= 1 ? 'disabled' : ''}>‹</button>
+                `;
+                
+                // 페이지 번호들 (최대 5개 표시)
+                const pageRange = 2;
+                let startPage = Math.max(1, currentPage - pageRange);
+                let endPage = Math.min(totalPages, currentPage + pageRange);
+
+                const pagesToShow = 5;
+                if (endPage - startPage + 1 < pagesToShow) {
+                    if (currentPage <= pageRange + 1) {
+                        endPage = Math.min(totalPages, startPage + pagesToShow - 1);
+                    } else if (currentPage >= totalPages - pageRange) {
+                        startPage = Math.max(1, endPage - pagesToShow + 1);
+                    }
+                }
+
+                if (startPage > 1) {
+                    html += `<button class="page-btn" onclick="RmtenantListModule.goToPage(1)">1</button>`;
+                    if (startPage > 2) {
+                        html += `<span style="padding: 0 5px;">...</span>`;
+                    }
+                }
+                
+                for (let i = startPage; i <= endPage; i++) {
+                    html += `
+                        <button class="page-btn ${i === currentPage ? 'active' : ''}" 
+                                onclick="RmtenantListModule.goToPage(${i})">${i}</button>
+                    `;
+                }
+                
+                if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) {
+                        html += `<span style="padding: 0 5px;">...</span>`;
+                    }
+                    html += `<button class="page-btn" onclick="RmtenantListModule.goToPage(${totalPages})">${totalPages}</button>`;
+                }
+                
+                // 다음 버튼
+                html += `
+                    <button class="page-btn ${currentPage >= totalPages ? 'disabled' : ''}" 
+                            onclick="RmtenantListModule.goToPage(${currentPage + 1})" 
+                            ${currentPage >= totalPages ? 'disabled' : ''}>›</button>
+                `;
+                
+                pagination.innerHTML = html;
+            },
+            
+            // 페이지 이동
+            goToPage: function(page) {
+                if (page < 1 || page > this.data.totalPages || page === this.data.currentPage) {
+                    return;
+                }
+                
+                this.data.currentPage = page;
+                this.loadRmtenantData('search');
+            },
+            
+            // 카운트 정보 업데이트
+            updateCountInfo: function() {
+                const totalCountElem = this.safeGetElement('rmtenant_total_count');
+                const currentPageElem = this.safeGetElement('rmtenant_current_page');
+                const totalPagesElem = this.safeGetElement('rmtenant_total_pages');
+
+                if (totalCountElem) totalCountElem.textContent = this.data.totalCount.toLocaleString();
+                if (currentPageElem) currentPageElem.textContent = this.data.currentPage;
+                if (totalPagesElem) totalPagesElem.textContent = this.data.totalPages;
+            },
+            
+            // 필터 초기화
+            resetFilters: function() {
+                const moveStatusSelect = this.safeGetElement('rmtenant_move_status');
+                const blSelect = this.safeGetElement('rmtenant_bl_select');
+                const flSelect = this.safeGetElement('rmtenant_fl_select');
+                const rmSelect = this.safeGetElement('rmtenant_rm_select');
+                const searchInput = this.safeGetElement('rmtenant_search_keyword');
+                const pageSizeSelect = this.safeGetElement('rmtenant_page_size');
+
+                if (moveStatusSelect) moveStatusSelect.value = '입실';
+                if (blSelect) blSelect.value = '';
+                if (flSelect) flSelect.innerHTML = '<option value="">층전체</option>';
+                if (rmSelect) rmSelect.innerHTML = '<option value="">실전체</option>';
+                if (searchInput) searchInput.value = '';
+                if (pageSizeSelect) pageSizeSelect.value = '20';
+
+                this.data.currentPage = 1;
+                this.data.pageSize = 20;
+                this.data.sortColumn = null;
+                this.data.sortDirection = 'both';
+                
+                this.updateSortIcons();
+                this.loadBuildingList();
+                this.loadRmtenantData('read');
+                
+                console.log('🔄 [RT] 필터 초기화 완료');
+            },
+            
+            // 로딩 표시
+            showLoading: function() {
+                const tableContent = this.safeGetElement('rmtenant_table_content');
+                if (!tableContent) return;
+                tableContent.innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        입주사 정보를 불러오는 중...
+                    </div>
+                `;
+            },
+            
+            // 오류 표시
+            showError: function(message) {
+                const tableContent = this.safeGetElement('rmtenant_table_content');
+                if (!tableContent) return;
+                tableContent.innerHTML = `
+                    <div class="empty-message" style="color: #dc3545;">
+                        ${message}
+                    </div>
+                `;
+                console.error('🔴 [RT] 입주사 오류:', message);
+            },
+            
+            // 정리 함수
+            cleanup: function() {
+                console.log('🏢 [RT] RmtenantListModule 정리 중...');
+                this.data.isInitialized = false;
+            }
+        };
+        
+        // 전역 초기화 함수 등록
+        window.initializeRmtenantList = function() {
+            window.RmtenantListModule.init();
+        };
+        
+        // 자동 초기화
+        setTimeout(() => {
+            if (!window.RmtenantListModule.data.isInitialized) {
+                console.log('🏢 [RT] RmtenantList 자동 초기화 시작');
+                window.RmtenantListModule.init();
+            } else {
+                console.log('🏢 [RT] RmtenantList 이미 초기화됨, 데이터만 새로고침');
+                window.RmtenantListModule.refreshData();
+            }
+        }, 100);
+        
+        console.log('🏢 [RT] RmtenantListModule 로드 완료');
+        
+    })();
+    </script>
+</body>
+</html>
